@@ -1,0 +1,29 @@
+digraph G {
+ graph [fontname="DejaVu Sans", fontsize=20, labelloc=t, bgcolor="white", pad=0.35, nodesep=0.45, ranksep=0.65];
+ node [shape=box, style="rounded,filled", fillcolor="#eef5ff", color="#365b80", fontname="DejaVu Sans", fontsize=12, margin="0.18,0.12"];
+ edge [fontname="DejaVu Sans", fontsize=10, color="#425466", arrowsize=0.8];
+
+ graph [rankdir=TB, label="Main FSM — state_q (3-bit RTL register)"];
+ reset [shape=oval, fillcolor="#f1f5f9", label="Reset or clear_i\n(from any state)"];
+ idle [label="IDLE (000)\nWait for start; busy=0"];
+ load [label="LOAD_FIRST (001)\nQueue first input tile\nLoad macro 0 weights + vector 0"];
+ run [label="RUN (010)\nCompute current tile product\nLoad next tile in other macro if has_next"];
+ present [label="PRESENT (011)\nresult_valid=1\nHold all 256 sums and tile coordinates"];
+ clear [label="CLEAR_TILE (100)\nacc_clear=1\nClear accumulators and selector at next edge"];
+ advance [label="ADVANCE (101)\nToggle active_q; advance [k][q][l]\nReset phase counters; compute state = ROWS"];
+ reset -> idle;
+ idle -> idle [label="!start_i || !valid_config"];
+ idle -> load [label="start_i && valid_config\nlatch configuration; zero progress"];
+ load -> load [label="!next_loaded"];
+ load -> run [label="next_loaded\nreset next-tile load counters"];
+ run -> run [label="!phase_complete"];
+ run -> advance [label="phase_complete && l_q != l_size_q-1\nretain accumulator sums"];
+ run -> present [label="phase_complete && l_q == l_size_q-1\nall L contributions complete"];
+ present -> present [label="!result_ready_i"];
+ present -> clear [label="result_ready_i\nentire output tile accepted"];
+ clear -> advance [label="has_next"];
+ clear -> idle [label="!has_next\ndone_o <= 1 (one-cycle pulse)"];
+ advance -> run [label="unconditional"];
+ legend [shape=note, fillcolor="#fff1cf", label="next_loaded = weights_loaded_q==128\n  && inputs_received_q==32 && first_sections_q==4\nphase_complete = compute_state_q==DRAIN\n  && results_q==256 && (!has_next || next_loaded)\nhas_next = any of k/l/q is not its final index\nTransitions occur at rising clk_i; reset is asynchronous.\nIllegal main state -> IDLE. Encodings shown are RTL enum values.\nacc_clear is also high in IDLE when start_i is high."];
+
+}

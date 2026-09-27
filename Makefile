@@ -20,7 +20,7 @@ BENDER_VERSION := 0.31.0
 BENDER         := $(SIM_DIR)/bender
 
 # ── Default target ────────────────────────────────────────────
-.PHONY: hw-all stim update-ips hw-compile sim-dual sim-double-buffering sim-single sim-datapath sim-cleopatra hw-clean
+.PHONY: hw-all stim update-ips hw-compile sim-dual sim-double-buffering sim-single sim-datapath sim-top sim-cleopatra hw-clean
 
 hw-all: stim hw-compile
 
@@ -53,14 +53,16 @@ stim:
 	python3 $(STIM_DIR)/double_buffering_stim.py
 
 # ── Compile RTL + TBs ─────────────────────────────────────────
-hw-compile: update-ips
+# Compile the locked dependencies; update-ips remains an explicit update step.
+hw-compile: $(BENDER)
 	mkdir -p $(SIM_DIR)
 	$(BENDER) script vsim        \
 	    --vlog-arg="-sv"         \
+	    --vlog-arg="-timescale 1ns/1ps" \
 	    -t tb                    \
 	    > $(COMPILE_TCL)
 	test -d $(WORK_DIR) || vlib $(WORK_DIR)
-	vsim -c -do "vmap work $(WORK_DIR); source $(COMPILE_TCL); quit -f"
+	vsim -c -do "onerror {quit -code 1}; vmap work $(WORK_DIR); if {[source $(COMPILE_TCL)] == 1} {quit -code 1}; quit -f"
 
 # ── Run simulations ───────────────────────────────────────────
 # Use GUI=1 to open the QuestaSim GUI instead of batch mode
@@ -71,7 +73,7 @@ VSIM_FLAGS = -voptargs=+acc
 VSIM_DO    = "run -all"
 else
 VSIM_FLAGS = -c 
-VSIM_DO    = "run -all; quit"
+VSIM_DO    = "do scripts/run_sim.tcl"
 endif
 
 sim-dual: stim hw-compile
@@ -87,6 +89,9 @@ sim-single: stim hw-compile
 
 sim-datapath: stim hw-compile
 	vsim $(VSIM_FLAGS) -l $(SIM_DIR)/transcript -lib $(WORK_DIR) tb_dimc_datapath -do $(VSIM_DO)
+
+sim-top: stim hw-compile
+	vsim $(VSIM_FLAGS) -l $(SIM_DIR)/transcript -lib $(WORK_DIR) tb_dimc_top -do $(VSIM_DO)
 
 sim-cleopatra: stim hw-compile
 	rm -f $(CLEO_TEST3_STIM_DIR)/test3_accumulator_output.txt

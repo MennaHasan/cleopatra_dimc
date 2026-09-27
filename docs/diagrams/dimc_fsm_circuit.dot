@@ -1,0 +1,33 @@
+digraph G {
+ graph [rankdir=LR, fontname="DejaVu Sans", fontsize=20, labelloc=t, label="FSM digital logic — representative RTL circuit", bgcolor=white, pad=0.3, ranksep=0.65];
+ node [shape=box, style="rounded,filled", fillcolor="#fff1cf", color="#365b80", fontname="DejaVu Sans", fontsize=12];
+ edge [fontname="DejaVu Sans", fontsize=10, color="#425466"];
+ cs [label="compute_state_q == DRAIN\n2-bit equality comparator"];
+ rc [label="results_q == 256\n9-bit equality comparator"];
+ wc [label="weights_loaded_q == 128\n8-bit equality comparator"];
+ ic [label="inputs_received_q == 32\n6-bit equality comparator"];
+ fc [label="first_sections_q == 4\n3-bit equality comparator"];
+ next [shape=ellipse, label="AND\nnext_loaded"];
+ hn [label="has_next\nOR of k/l/q not-at-end comparisons"];
+ inv [shape=triangle, label="NOT"];
+ either [shape=ellipse, label="OR"];
+ phase [shape=ellipse, label="AND\nphase_complete"];
+ other [label="Other transition inputs\nstart_i, valid_config, result_ready_i\nl_q == l_size_q-1, has_next"];
+ mux [shape=trapezium, label="Next-state selection mux / priority decode\nIDLE: start && valid ? LOAD_FIRST : IDLE\nLOAD_FIRST: next_loaded ? RUN : LOAD_FIRST\nRUN: !phase_complete ? RUN :\n         last_l ? PRESENT : ADVANCE\nPRESENT: ready ? CLEAR_TILE : PRESENT\nCLEAR_TILE: has_next ? ADVANCE : IDLE\nADVANCE: RUN\nillegal: IDLE"];
+ ff [shape=record, style=filled, fillcolor="#dbeafe", label="{<d> D[2:0]|state_q\n3 flip-flops|<q> Q[2:0]|<clk> CLK rising edge|<rst> asynchronous reset to IDLE}"];
+ clock [shape=plaintext, label="clk_i"];
+ reset [shape=plaintext, label="core_rst_n = rst_ni AND NOT clear_i"];
+ decode [label="State equality decoders\nIDLE / LOAD_FIRST / RUN\nPRESENT / CLEAR_TILE / ADVANCE"];
+ pins [label="Output combinational logic\nresult_valid = PRESENT && core_rst_n\nbusy = !IDLE && core_rst_n\nready_o = busy\nacc_clear = CLEAR_TILE || (IDLE && start_i)\nload_enable = LOAD_FIRST || (RUN && has_next)"];
+ wc -> next; ic -> next; fc -> next;
+ hn -> inv; inv -> either; next -> either;
+ cs -> phase; rc -> phase; either -> phase;
+ phase -> mux; next -> mux; other -> mux;
+ mux -> ff:d [label="selected next state"];
+ clock -> ff:clk;
+ reset -> ff:rst;
+ ff:q -> decode;
+ decode -> mux [label="current-state selection", constraint=false];
+ decode -> pins;
+ note [shape=note, fillcolor="#f1f5f9", label="Logical circuit, not a technology-mapped netlist.\nState register resets asynchronously; other transitions\noccur on the rising clock edge. A held state selects\nits current value for D. The compute FSM uses the\nsame register + decode + next-value mux structure.\ndone_o is a separate flip-flop (see control diagram)."];
+}

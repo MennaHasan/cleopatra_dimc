@@ -54,18 +54,22 @@ module cleopatra #(
 
     // accumulator control
     input  logic                        clear,
-    output logic [OUT_WIDTH-1:0]        acc_o [0:255]
+    output logic [OUT_WIDTH-1:0]        acc_o [0:255],
+
+    // FIFO status and one pulse per result consumed by an accumulator.
+    output logic inp_full, inp_empty,
+    output logic wgt_full, wgt_empty,
+    output logic result_pop_o
 );
 
     // dimc_dual status/handshake signals
     logic                     READYN;
     logic [31:0]              PSOUT;
-    logic                     inp_full, inp_empty;
-    logic                     wgt_full, wgt_empty;
 
     // dimc_dual output FIFO 
     logic out_pop, out_full, out_empty;
     assign out_pop = ~out_empty;
+    assign result_pop_o = out_pop;
 
     // Accumulate exactly once per popped result. Each accumulator uses its
     // own enable bit, gated by the local out_pop handshake.

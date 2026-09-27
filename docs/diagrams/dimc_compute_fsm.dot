@@ -1,0 +1,20 @@
+digraph G {
+ graph [fontname="DejaVu Sans", fontsize=20, labelloc=t, bgcolor="white", pad=0.35, nodesep=0.45, ranksep=0.65];
+ node [shape=box, style="rounded,filled", fillcolor="#eef5ff", color="#365b80", fontname="DejaVu Sans", fontsize=12, margin="0.18,0.12"];
+ edge [fontname="DejaVu Sans", fontsize=10, color="#425466", arrowsize=0.8];
+
+ graph [rankdir=TB, label="Compute FSM — compute_state_q (2-bit RTL register)"];
+ init [shape=oval, fillcolor="#f1f5f9", label="Reset / accepted start / ADVANCE\nrow=0; section=0; vector=0"];
+ rows [label="ROWS (00)\nIssue a dot product for current row\nCOMPE=1, RCSN*=0\nRA={row_q, 2'b00}"];
+ features [label="FEATURES (01)\nLoad next vector, one section per transfer\nFCSN=0 and FA=section_q only when !inp_empty"];
+ drain [label="DRAIN (10)\nNo new compute requests\nWait for issued results to reach accumulators"];
+ init -> rows;
+ rows -> rows [label="row_q != 31\nrow_q <= row_q+1"];
+ rows -> features [label="row_q==31 && vector_q!=7\nrow_q <= 0"];
+ rows -> drain [label="row_q==31 && vector_q==7\nrow_q <= 0"];
+ features -> features [label="inp_empty: hold\nOR transfer with section_q!=3: increment section"];
+ features -> rows [label="feature_load && section_q==3\nsection wraps to 0; vector_q <= vector_q+1"];
+ drain -> drain [label="hold until main FSM advances or new job starts"];
+ note [shape=note, fillcolor="#fff1cf", label="ROWS/FEATURES transitions run only while main state is RUN.\nOutside RUN this register holds, except reset/start/ADVANCE.\nfeature_load = RUN && FEATURES && !inp_empty.\nresults_q increments on result_pop, not on issue.\nMain FSM leaves RUN when phase_complete becomes true.\nParallel weight/first-vector loading is NOT another state here.\nIllegal compute state -> DRAIN while RUN."];
+
+}

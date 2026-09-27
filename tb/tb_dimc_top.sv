@@ -81,6 +81,220 @@ module tb_dimc_memory_port #(
   end
 endmodule
 
+// Passive timing instrumentation: this module never drives the RTL. A cycle
+// timestamp is taken at each rising edge. Latency = end edge - start edge;
+// adjacent edges are one cycle apart (there is no extra inclusive +1).
+module tb_dimc_timing_monitor (
+  input logic clk_i, rst_ni, enable_i, stalls_i,
+  input logic job_start_i, job_done_i,
+  input wire dimc_package::dimc_config_t config_i,
+  input logic memory_req_i, memory_gnt_i, fifo_push_i, macro_write_i,
+  input logic load_macro_i,
+  input logic [1:0] feature_load_i, compute_issue_i,
+  input logic [1:0][1:0] feature_addr_i,
+  input logic [1:0][6:0] compute_addr_i,
+  input logic result_pop_i, active_macro_i, output_tile_accept_i
+);
+  typedef struct packed {
+    longint unsigned request_cycle;
+    longint unsigned fifo_cycle;
+  } section_stamp_t;
+  longint unsigned request_times[$];
+  section_stamp_t fifo_times[$];
+  section_stamp_t stamp;
+  longint unsigned cycle=0, start_cycle, request_cycle;
+  longint unsigned memory_latency, fifo_latency;
+  longint unsigned memory_sum, memory_min, memory_max;
+  longint unsigned fifo_sum, fifo_min, fifo_max;
+  longint unsigned expected_products, expected_outputs, sections;
+  int products, output_tiles, results_in_product, macro_products[0:1];
+  bit measuring=0, request_waiting=0;
+
+  typedef struct packed {
+    longint unsigned samples, sum, minimum, maximum;
+  } latency_stats_t;
+  latency_stats_t weight_tile_stats[0:1], vector_stats[0:1], matvec_stats[0:1];
+  longint unsigned weight_tile_start[0:1], vector_start[0:1];
+  int weight_sections[0:1], vector_sections[0:1];
+  typedef struct packed {
+    logic macro_id;
+    longint unsigned start_cycle;
+  } matvec_stamp_t;
+  matvec_stamp_t matvec_starts[$], matvec_stamp;
+
+  // Simulation-only helpers for collecting and printing actual edge intervals.
+  task automatic add_sample(inout latency_stats_t stats, input longint unsigned latency);
+    stats.samples++;
+    stats.sum+=latency;
+    if (latency<stats.minimum) stats.minimum=latency;
+    if (latency>stats.maximum) stats.maximum=latency;
+  endtask
+  task automatic print_stats(input int macro_id, input string label_, input latency_stats_t stats);
+    if (stats.samples>0)
+      $display("[TIMING] Macro %0d %s: samples=%0d min=%0d avg=%0.3f max=%0d cycles",
+        macro_id,label_,stats.samples,stats.minimum,real'(stats.sum)/real'(stats.samples),stats.maximum);
+    else
+      $display("[TIMING] Macro %0d %s: samples=0 (no measurement)",macro_id,label_);
+  endtask
+
+  always @(posedge clk_i) begin
+    if (!rst_ni) begin
+      cycle=0;
+      measuring=0;
+      request_waiting=0;
+      request_times.delete();
+      fifo_times.delete();
+      matvec_starts.delete();
+    end else if (enable_i) begin
+      cycle++;
+      // The datapath accepts start and latches its dimensions on this edge.
+      // Software register programming and controller launch overhead precede it.
+      if (job_start_i) begin
+        assert (!measuring) else $fatal(1,"Timing monitor saw overlapping jobs");
+        measuring=1;
+        start_cycle=cycle;
+        products=0; output_tiles=0; results_in_product=0; sections=0;
+        macro_products[0]=0; macro_products[1]=0;
+        memory_sum=0; memory_min='1; memory_max=0;
+        fifo_sum=0; fifo_min='1; fifo_max=0;
+        request_waiting=0;
+        request_times.delete(); fifo_times.delete();
+        matvec_starts.delete();
+        for (int m=0; m<2; m++) begin
+          weight_tile_stats[m]='{samples:0, sum:0, minimum:'1, maximum:0};
+          vector_stats[m]='{samples:0, sum:0, minimum:'1, maximum:0};
+          matvec_stats[m]='{samples:0, sum:0, minimum:'1, maximum:0};
+          weight_sections[m]=0; vector_sections[m]=0;
+          weight_tile_start[m]=0; vector_start[m]=0;
+        end
+        expected_outputs=64'(config_i.weight_rows/32)*64'(config_i.input_cols/8);
+        expected_products=expected_outputs*64'(config_i.weight_cols/128);
+        $display("[TIMING] ONE JOB: weights=%0dx%0d, inputs=%0dx%0d, result=%0dx%0d",
+          config_i.weight_rows,config_i.weight_cols,config_i.input_rows,
+          config_i.input_cols,config_i.weight_rows,config_i.input_cols);
+        $display("[TIMING] Clock=10 ns. Cycle 0 = datapath start accepted; memory stalls=%0d",
+          stalls_i);
+        $display("[TIMING] Cumulative tile milestones finish when the 256th result is accumulated.");
+      end
+      if (measuring) begin
+        // Timestamp the FIRST sampled assertion of each weight request, before
+        // grant. Keep the timestamp through grant stalls. Back-to-back granted
+        // requests count separately even when req never goes low.
+        if (memory_req_i && !request_waiting) request_times.push_back(cycle);
+        request_waiting=memory_req_i && !memory_gnt_i;
+        // Responses are ordered on this HCI source. Match each incoming section
+        // to its request, then follow it through the FIFO to the macro write.
+        if (fifo_push_i) begin
+          assert (request_times.size()>0) else $fatal(1,"Weight FIFO data without a memory request");
+          request_cycle=request_times.pop_front();
+          stamp.request_cycle=request_cycle;
+          stamp.fifo_cycle=cycle;
+          fifo_times.push_back(stamp);
+        end
+        if (macro_write_i) begin
+          assert (fifo_times.size()>0) else $fatal(1,"Macro write without a weight FIFO entry");
+          stamp=fifo_times.pop_front();
+          memory_latency=cycle-stamp.request_cycle;
+          fifo_latency=cycle-stamp.fifo_cycle;
+          assert (memory_latency>=fifo_latency) else $fatal(1,"Invalid latency timestamps");
+          sections++;
+          memory_sum+=memory_latency;
+          fifo_sum+=fifo_latency;
+          if (memory_latency<memory_min) memory_min=memory_latency;
+          if (memory_latency>memory_max) memory_max=memory_latency;
+          if (fifo_latency<fifo_min) fifo_min=fifo_latency;
+          if (fifo_latency>fifo_max) fifo_max=fifo_latency;
+          // The first section's original request timestamp survives both
+          // queues. Its 128th macro write completes that full weight tile.
+          // Keep separate progress for each macro because loading overlaps
+          // the other macro's computation.
+          if (weight_sections[load_macro_i]==0)
+            weight_tile_start[load_macro_i]=stamp.request_cycle;
+          weight_sections[load_macro_i]++;
+          if (weight_sections[load_macro_i]==128) begin
+            add_sample(weight_tile_stats[load_macro_i],cycle-weight_tile_start[load_macro_i]);
+            weight_sections[load_macro_i]=0;
+          end
+        end
+        for (int m=0; m<2; m++) begin
+          // Observe actual feature-buffer writes, including the prefetched
+          // first vector. Gaps between its four sections contribute to time.
+          if (feature_load_i[m]) begin
+            assert (int'(feature_addr_i[m])==vector_sections[m])
+              else $fatal(1,"Input-vector sections out of order on macro %0d",m);
+            if (vector_sections[m]==0) vector_start[m]=cycle;
+            vector_sections[m]++;
+            if (vector_sections[m]==4) begin
+              add_sample(vector_stats[m],cycle-vector_start[m]);
+              vector_sections[m]=0;
+            end
+          end
+          // A matvec starts when row 0 is actually issued. Keep a queue:
+          // the next matvec can begin before the previous one's final result
+          // emerges from the pipeline, so one start register is insufficient.
+          if (compute_issue_i[m] && compute_addr_i[m]==0) begin
+            matvec_stamp.macro_id=1'(m);
+            matvec_stamp.start_cycle=cycle;
+            matvec_starts.push_back(matvec_stamp);
+          end
+        end
+        // Count actual accumulator updates, not requests or FSM transitions.
+        // Every 256 updates completes one 32x128 by 128x8 tile product.
+        if (result_pop_i) begin
+          results_in_product++;
+          // Every 32 accumulated results completes one matvec. Match it to
+          // its issued row-0 timestamp rather than estimating pipeline delay.
+          if (results_in_product%32==0) begin
+            assert (matvec_starts.size()>0) else $fatal(1,"Matvec results without an issue timestamp");
+            matvec_stamp=matvec_starts.pop_front();
+            assert (matvec_stamp.macro_id==active_macro_i)
+              else $fatal(1,"Matvec issue/result macro mismatch");
+            add_sample(matvec_stats[active_macro_i],cycle-matvec_stamp.start_cycle);
+          end
+          if (results_in_product==256) begin
+            results_in_product=0;
+            products++;
+            macro_products[active_macro_i]++;
+            if (products<=5)
+              $display("[TIMING] %0d tile product(s) complete: %0d cumulative cycles (latest: macro %0d)",
+                products,cycle-start_cycle,active_macro_i);
+          end
+        end
+        if (output_tile_accept_i) output_tiles++;
+        // Controller completion follows the final output memory writes and the
+        // datapath completion. Its HWPE event is registered at this same edge.
+        if (job_done_i) begin
+          assert (products==expected_products && results_in_product==0 &&
+                  output_tiles==expected_outputs && sections==expected_products*128 &&
+                  request_times.size()==0 && fifo_times.size()==0 &&
+                  matvec_starts.size()==0 && !request_waiting)
+            else $fatal(1,"Incomplete timing samples at job completion");
+          $display("[TIMING] FULL MATRIX MULTIPLICATION complete: %0d cycles (including output writes)",
+            cycle-start_cycle);
+          $display("[TIMING] Completed: %0d tile products; macro 0=%0d, macro 1=%0d; output tiles=%0d",
+            products,macro_products[0],macro_products[1],output_tiles);
+          $display("[TIMING] Weight sections measured: %0d (including repeated tile loads)",sections);
+          $display("[TIMING] Memory request -> macro write: min=%0d avg=%0.3f max=%0d cycles",
+            memory_min,real'(memory_sum)/real'(sections),memory_max);
+          $display("[TIMING] Weight FIFO acceptance -> macro write: min=%0d avg=%0.3f max=%0d cycles",
+            fifo_min,real'(fifo_sum)/real'(sections),fifo_max);
+          for (int m=0; m<2; m++) begin
+            assert (weight_tile_stats[m].samples==macro_products[m] &&
+                    vector_stats[m].samples==macro_products[m]*8 &&
+                    matvec_stats[m].samples==macro_products[m]*8 &&
+                    weight_sections[m]==0 && vector_sections[m]==0)
+              else $fatal(1,"Incomplete per-macro timing samples for macro %0d",m);
+            print_stats(m,"weight tile (first memory request -> last macro write)",weight_tile_stats[m]);
+            print_stats(m,"input vector (first -> fourth feature write)",vector_stats[m]);
+            print_stats(m,"matvec (row 0 issued -> 32nd result accumulated)",matvec_stats[m]);
+          end
+          measuring=0;
+        end
+      end
+    end
+  end
+endmodule
+
 module tb_dimc_top;
   import dimc_package::*;
   import tb_dimc_memory::*;
@@ -95,6 +309,21 @@ module tb_dimc_top;
   dimc_top i_dut (
     .clk_i(clk), .rst_ni(rst_n), .test_mode_i(1'b0), .busy_o(busy), .evt_o(evt),
     .periph, .input_tcdm(input_mem), .kernel_tcdm(weight_mem), .output_tcdm(output_mem)
+  );
+  // +TIMING_ONLY selects one complete job instead of the multi-job regression.
+  bit timing_only=$test$plusargs("TIMING_ONLY");
+  int timing_stalls=0;
+  tb_dimc_timing_monitor i_timing (
+    .clk_i(clk), .rst_ni(rst_n), .enable_i(timing_only), .stalls_i(stalls),
+    .job_start_i(i_dut.dp_start), .job_done_i(i_dut.i_ctrl.slave_ctrl.done),
+    .config_i(i_dut.config_), .memory_req_i(weight_mem.req), .memory_gnt_i(weight_mem.gnt),
+    .fifo_push_i(i_dut.i_datapath.wgt_push), .macro_write_i(i_dut.i_datapath.weight_load),
+    .load_macro_i(i_dut.i_datapath.load_macro),
+    .feature_load_i(~i_dut.i_datapath.fcsn), .feature_addr_i(i_dut.i_datapath.fa),
+    .compute_issue_i(i_dut.i_datapath.compe & ~i_dut.i_datapath.rcsn),
+    .compute_addr_i(i_dut.i_datapath.ra),
+    .result_pop_i(i_dut.i_datapath.result_pop), .active_macro_i(i_dut.i_datapath.active_q),
+    .output_tile_accept_i(i_dut.result_valid && i_dut.result_ready)
   );
   localparam int WBASE='h1000, IBASE='h11000, OBASE='h14000;
   logic [31:0] weight_bytes, input_bytes, output_bytes;
@@ -229,6 +458,14 @@ module tb_dimc_top;
     repeat (4) @(negedge clk);
     rst_n=1;
     repeat (8) @(negedge clk);
+    if (timing_only) begin
+      void'($value$plusargs("TIMING_STALLS=%d",timing_stalls));
+      assert (timing_stalls==0 || timing_stalls==1)
+        else $fatal(1,"TIMING_STALLS must be 0 or 1");
+      run_job(4,3,2,1'(timing_stalls));
+      $display("[TIMING] Single-job golden-result check PASSED");
+      $finish;
+    end
     run_job(4,3,2,0);
     run_job(4,3,2,1);
     run_job(1,1,1,1);

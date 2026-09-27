@@ -20,7 +20,7 @@ BENDER_VERSION := 0.31.0
 BENDER         := $(SIM_DIR)/bender
 
 # ── Default target ────────────────────────────────────────────
-.PHONY: hw-all stim update-ips hw-compile sim-dual sim-double-buffering sim-single sim-datapath sim-top sim-cleopatra hw-clean
+.PHONY: hw-all stim update-ips hw-compile sim-dual sim-double-buffering sim-single sim-datapath sim-top sim-top-timing sim-cleopatra hw-clean
 
 hw-all: stim hw-compile
 
@@ -68,6 +68,7 @@ hw-compile: $(BENDER)
 # Use GUI=1 to open the QuestaSim GUI instead of batch mode
 
 GUI ?= 0
+TIMING_STALLS ?= 0
 ifeq ($(GUI),1)
 VSIM_FLAGS = -voptargs=+acc
 VSIM_DO    = "run -all"
@@ -92,6 +93,10 @@ sim-datapath: stim hw-compile
 
 sim-top: stim hw-compile
 	vsim $(VSIM_FLAGS) -l $(SIM_DIR)/transcript -lib $(WORK_DIR) tb_dimc_top -do $(VSIM_DO)
+
+# One K=4,L=3,Q=2 job; timestamps are observed in the simulation, not estimated.
+sim-top-timing: stim hw-compile
+	vsim $(VSIM_FLAGS) -l $(SIM_DIR)/transcript -lib $(WORK_DIR) tb_dimc_top +TIMING_ONLY +TIMING_STALLS=$(TIMING_STALLS) -do $(VSIM_DO)
 
 sim-cleopatra: stim hw-compile
 	rm -f $(CLEO_TEST3_STIM_DIR)/test3_accumulator_output.txt

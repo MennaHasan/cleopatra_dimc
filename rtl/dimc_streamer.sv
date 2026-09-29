@@ -16,7 +16,7 @@ module dimc_streamer
   parameter hci_size_parameter_t KERNEL_SIZE = '{DW:256, AW:32, BW:8, UW:1, IW:1, EW:0, EHW:0},
   parameter hci_size_parameter_t OUTPUT_SIZE = '{DW:256, AW:32, BW:8, UW:1, IW:1, EW:0, EHW:0}
 )(
-  input logic clk_i, rst_ni, test_mode_i, clear_i, abort_i, start_i,
+  input logic clk_i, rst_ni, clear_i, abort_i, start_i,
   input wire dimc_config_t config_i,
   output dimc_streamer_flags_t flags_o,
   hci_core_intf.initiator input_tcdm,
@@ -100,20 +100,20 @@ module dimc_streamer
   hci_core_source #(
     .MISALIGNED_ACCESSES(0), .DIM_ENABLE_1H(4'b0000), .HCI_SIZE_tcdm(INPUT_SIZE)
   ) i_input_source (
-    .clk_i, .rst_ni, .test_mode_i, .clear_i, .enable_i(1'b1),
+    .clk_i, .rst_ni, .test_mode_i(1'b0), .clear_i, .enable_i(1'b1),
     .tcdm(input_tcdm), .stream(input_mem), .ctrl_i(input_ctrl), .flags_o(input_flags)
   );
   hci_core_source #(
     .MISALIGNED_ACCESSES(0), .DIM_ENABLE_1H(4'b0001), .HCI_SIZE_tcdm(KERNEL_SIZE)
   ) i_kernel_source (
-    .clk_i, .rst_ni, .test_mode_i, .clear_i, .enable_i(1'b1),
+    .clk_i, .rst_ni, .test_mode_i(1'b0), .clear_i, .enable_i(1'b1),
     .tcdm(kernel_tcdm), .stream(kernel_mem), .ctrl_i(kernel_ctrl), .flags_o(kernel_flags)
   );
   hci_core_sink #(
     .MISALIGNED_ACCESSES(0), .TCDM_FIFO_DEPTH(0), .DIM_ENABLE_1H(4'b0000),
     .HCI_SIZE_tcdm(OUTPUT_SIZE)
   ) i_output_sink (
-    .clk_i, .rst_ni, .test_mode_i, .clear_i, .enable_i(1'b1),
+    .clk_i, .rst_ni, .test_mode_i(1'b0), .clear_i, .enable_i(1'b1),
     .tcdm(output_tcdm), .stream(output_mem), .ctrl_i(output_ctrl), .flags_o(output_flags)
   );
 

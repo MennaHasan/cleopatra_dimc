@@ -39,7 +39,7 @@ module dimc_datapath
   input  logic                 clear_i,
 
   // Start a job and latch its matrix dimensions (in elements) and configuration.
-  // Pulse start_i for one clock when busy_o is low. These inputs are sampled
+  // Pulse start_i for one clock when idle (ready_o is low). These inputs are sampled
   // once, so the controller may change them after the command is accepted.
   // clear_i aborts a job; it is different from clearing one completed tile.
   input  logic                 start_i,
@@ -71,21 +71,18 @@ module dimc_datapath
   // Job status; stream ready signals control individual input transfers.
   // ready_o means setup has completed, NOT that every stream can accept a
   // beat right now. Use input_i.ready/kernel_i.ready for individual beats.
-  // busy_o includes time spent waiting for the receiver to accept results.
+  // ready_o stays high until completion, including result backpressure.
   output logic                 ready_o, // setup complete, ready to receive tiles
-  output logic                 busy_o,
   output logic                 done_o,  // pulse after the final result tile is accepted
 
-  // Hold each result tile and its zero-based tile coordinates until accepted.
-  // result_o[row][col] maps to full result [result_k_o*32+row][result_q_o*8+col].
+  // Hold each result tile until accepted; emit tiles in [k][q] order, q first.
+  // result_o[row][col] maps to full result [k*32+row][q*8+col].
   // One output handshake accepts ALL 256 values. A receiver that reads values
   // individually must keep result_ready_i low until it has captured the tile.
-  // Data and coordinates are meaningful while result_valid_o is high.
+  // Data is meaningful while result_valid_o is high.
   output logic [31:0]          result_o [0:31][0:7],
   output logic                 result_valid_o,
-  input  logic                 result_ready_i,
-  output logic [31:0]          result_k_o,
-  output logic [31:0]          result_q_o
+  input  logic                 result_ready_i
 );
   localparam int NUM_SECTIONS = 4;
   localparam int WEIGHT_BEATS = 128;
@@ -132,11 +129,8 @@ module dimc_datapath
 
   // clear_i aborts the whole job, including queued data and pipeline results.
   assign core_rst_n = rst_ni & ~clear_i;
-  assign busy_o = (state_q != IDLE) & core_rst_n;
-  assign ready_o = busy_o;
+  assign ready_o = (state_q != IDLE) & core_rst_n;
   assign result_valid_o = (state_q == PRESENT) & core_rst_n;
-  assign result_k_o = k_q;
-  assign result_q_o = q_q;
   // These generate loops create fixed wiring, not clock-by-clock loops.
   // Cleopatra produces rows 0..31 for column 0, then rows for column 1, etc.
   // Hence accumulator index = column*32 + row. No extra result buffer is

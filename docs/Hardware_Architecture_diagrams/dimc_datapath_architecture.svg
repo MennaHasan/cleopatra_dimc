@@ -1,0 +1,426 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3900" height="2080" viewBox="0 0 3900 2080">
+<defs><marker id="end" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#334155"/></marker><marker id="start" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10 0 L0 5 L10 10 Z" fill="#334155"/></marker></defs><rect width="3900" height="2080" fill="white"/>
+<text x="1950" y="50" font-family="DejaVu Sans, sans-serif" font-size="32" text-anchor="middle" fill="#172033">dimc_datapath — hardware block diagram</text>
+<rect x="300" y="110" width="3350" height="1790" fill="white" stroke="#64748b" stroke-width="2"/>
+<text x="325" y="148" font-family="DejaVu Sans, sans-serif" font-size="25" text-anchor="start" fill="#172033">dimc_datapath</text>
+<rect x="600" y="355" width="350" height="1450" fill="#f5f0ff" stroke="#8b5cf6" stroke-width="2"/>
+<text x="775" y="390" font-family="DejaVu Sans, sans-serif" font-size="24" text-anchor="middle" fill="#172033">Local datapath logic</text>
+<text x="775" y="417" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="middle" fill="#172033">RTL, not an instantiated module</text>
+<rect x="1550" y="355" width="1710" height="1450" fill="#f8fbff" stroke="#3b82f6" stroke-width="2"/>
+<text x="2400" y="390" font-family="DejaVu Sans, sans-serif" font-size="26" text-anchor="middle" fill="#172033">cleopatra</text>
+<text x="2400" y="417" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="middle" fill="#172033">i_cleopatra</text>
+<polyline points="65,470 600,470" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="457" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">clk_i</text>
+<polyline points="65,535 600,535" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="522" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">rst_ni</text>
+<polyline points="65,600 600,600" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="587" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">clear_i</text>
+<polyline points="65,665 600,665" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="652" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">start_i</text>
+<polyline points="65,730 600,730" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="717" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">weight_rows_i</text>
+<polyline points="65,795 600,795" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="782" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">weight_cols_i</text>
+<polyline points="65,860 600,860" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="847" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">input_rows_i</text>
+<polyline points="65,925 600,925" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="912" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">input_cols_i</text>
+<polyline points="65,990 600,990" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="977" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">mode_i</text>
+<polyline points="65,1055 600,1055" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="1042" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">sign_8b_i</text>
+<polyline points="65,1120 600,1120" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="1107" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">bias_i</text>
+<polyline points="65,1185 600,1185" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="1172" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">write_mask_i</text>
+<polyline points="65,1250 600,1250" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="1237" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">compute_mask_i</text>
+<polyline points="65,1315 600,1315" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)" marker-start="url(#start)"/>
+<text x="90" y="1302" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">input_i</text>
+<text x="330" y="1302" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">stream sink interface</text>
+<polyline points="65,1380 600,1380" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)" marker-start="url(#start)"/>
+<text x="90" y="1367" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">kernel_i</text>
+<text x="330" y="1367" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">stream sink interface</text>
+<polyline points="65,1445 600,1445" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="90" y="1432" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="start" fill="#172033">result_ready_i</text>
+<polyline points="680,355 680,195 3800,195" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="3700" y="183" font-family="DejaVu Sans, sans-serif" font-size="20" text-anchor="middle" fill="#172033">ready_o</text>
+<polyline points="780,355 780,250 3800,250" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="3700" y="238" font-family="DejaVu Sans, sans-serif" font-size="20" text-anchor="middle" fill="#172033">done_o</text>
+<polyline points="880,355 880,305 3800,305" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="3700" y="293" font-family="DejaVu Sans, sans-serif" font-size="20" text-anchor="middle" fill="#172033">result_valid_o</text>
+<polyline points="950,452 1550,452" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="446" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">clk_i</text>
+<text x="1563" y="447" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">clk</text>
+<polyline points="1550,452 1790,452" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="457" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">clk</text>
+<polyline points="950,479 1550,479" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="473" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">core_rst_n</text>
+<text x="1563" y="474" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">rst_n</text>
+<polyline points="1550,479 1790,479" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="484" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">rst_n</text>
+<polyline points="950,506 1550,506" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="500" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">active_q</text>
+<text x="1563" y="501" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">sel</text>
+<polyline points="1550,506 1790,506" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="511" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">sel</text>
+<polyline points="950,533 1550,533" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="527" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">compe[0]</text>
+<text x="1563" y="528" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">COMPE_m0</text>
+<polyline points="1550,533 1790,533" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="538" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">COMPE_m0</text>
+<polyline points="950,560 1550,560" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="554" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">fcsn[0]</text>
+<text x="1563" y="555" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">FCSN_m0</text>
+<polyline points="1550,560 1790,560" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="565" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">FCSN_m0</text>
+<polyline points="950,587 1550,587" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="581" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">mode_q</text>
+<text x="1563" y="582" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">MODE_m0</text>
+<polyline points="1550,587 1790,587" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="592" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">MODE_m0</text>
+<polyline points="950,614 1550,614" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="608" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">fa[0]</text>
+<text x="1563" y="609" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">FA_m0</text>
+<polyline points="1550,614 1790,614" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="619" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">FA_m0</text>
+<polyline points="950,641 1550,641" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="635" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">bias_q</text>
+<text x="1563" y="636" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">ADDIN_m0</text>
+<polyline points="1550,641 1790,641" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="646" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">ADDIN_m0</text>
+<polyline points="950,668 1550,668" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="662" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">ra[0]</text>
+<text x="1563" y="663" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RA_m0</text>
+<polyline points="1550,668 1790,668" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="673" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RA_m0</text>
+<polyline points="950,695 1550,695" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="689" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">wa[0]</text>
+<text x="1563" y="690" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WA_m0</text>
+<polyline points="1550,695 1790,695" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="700" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WA_m0</text>
+<polyline points="950,722 1550,722" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="716" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">rcsn[0]</text>
+<text x="1563" y="717" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN_m0</text>
+<polyline points="1550,722 1790,722" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="727" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN_m0</text>
+<polyline points="950,749 1550,749" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="743" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">rcsn[0]</text>
+<text x="1563" y="744" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN0_m0</text>
+<polyline points="1550,749 1790,749" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="754" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN0_m0</text>
+<polyline points="950,776 1550,776" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="770" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">rcsn[0]</text>
+<text x="1563" y="771" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN1_m0</text>
+<polyline points="1550,776 1790,776" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="781" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN1_m0</text>
+<polyline points="950,803 1550,803" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="797" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">rcsn[0]</text>
+<text x="1563" y="798" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN2_m0</text>
+<polyline points="1550,803 1790,803" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="808" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN2_m0</text>
+<polyline points="950,830 1550,830" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="824" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">rcsn[0]</text>
+<text x="1563" y="825" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN3_m0</text>
+<polyline points="1550,830 1790,830" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="835" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN3_m0</text>
+<polyline points="950,857 1550,857" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="851" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">wcsn[0]</text>
+<text x="1563" y="852" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WCSN_m0</text>
+<polyline points="1550,857 1790,857" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="862" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WCSN_m0</text>
+<polyline points="950,884 1550,884" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="878" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">wcsn[0]</text>
+<text x="1563" y="879" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WEN_m0</text>
+<polyline points="1550,884 1790,884" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="889" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WEN_m0</text>
+<polyline points="950,911 1550,911" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="905" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">mask_q</text>
+<text x="1563" y="906" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">M_m0</text>
+<polyline points="1550,911 1790,911" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="916" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">M_m0</text>
+<polyline points="950,938 1550,938" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="932" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">compute_mask_q</text>
+<text x="1563" y="933" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">compute_mask_m0</text>
+<polyline points="1550,938 1790,938" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="943" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">compute_mask_m0</text>
+<polyline points="950,965 1550,965" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="959" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">sign_q</text>
+<text x="1563" y="960" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">sign_8b_m0</text>
+<polyline points="1550,965 1790,965" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="970" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">sign_8b_m0</text>
+<polyline points="950,992 1550,992" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="986" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">compe[1]</text>
+<text x="1563" y="987" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">COMPE_m1</text>
+<polyline points="1550,992 1790,992" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="997" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">COMPE_m1</text>
+<polyline points="950,1019 1550,1019" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1013" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">fcsn[1]</text>
+<text x="1563" y="1014" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">FCSN_m1</text>
+<polyline points="1550,1019 1790,1019" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1024" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">FCSN_m1</text>
+<polyline points="950,1046 1550,1046" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1040" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">mode_q</text>
+<text x="1563" y="1041" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">MODE_m1</text>
+<polyline points="1550,1046 1790,1046" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1051" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">MODE_m1</text>
+<polyline points="950,1073 1550,1073" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1067" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">fa[1]</text>
+<text x="1563" y="1068" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">FA_m1</text>
+<polyline points="1550,1073 1790,1073" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1078" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">FA_m1</text>
+<polyline points="950,1100 1550,1100" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1094" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">bias_q</text>
+<text x="1563" y="1095" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">ADDIN_m1</text>
+<polyline points="1550,1100 1790,1100" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1105" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">ADDIN_m1</text>
+<polyline points="950,1127 1550,1127" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1121" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">ra[1]</text>
+<text x="1563" y="1122" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RA_m1</text>
+<polyline points="1550,1127 1790,1127" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1132" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RA_m1</text>
+<polyline points="950,1154 1550,1154" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1148" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">wa[1]</text>
+<text x="1563" y="1149" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WA_m1</text>
+<polyline points="1550,1154 1790,1154" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1159" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WA_m1</text>
+<polyline points="950,1181 1550,1181" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1175" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">rcsn[1]</text>
+<text x="1563" y="1176" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN_m1</text>
+<polyline points="1550,1181 1790,1181" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1186" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN_m1</text>
+<polyline points="950,1208 1550,1208" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1202" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">rcsn[1]</text>
+<text x="1563" y="1203" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN0_m1</text>
+<polyline points="1550,1208 1790,1208" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1213" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN0_m1</text>
+<polyline points="950,1235 1550,1235" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1229" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">rcsn[1]</text>
+<text x="1563" y="1230" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN1_m1</text>
+<polyline points="1550,1235 1790,1235" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1240" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN1_m1</text>
+<polyline points="950,1262 1550,1262" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1256" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">rcsn[1]</text>
+<text x="1563" y="1257" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN2_m1</text>
+<polyline points="1550,1262 1790,1262" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1267" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN2_m1</text>
+<polyline points="950,1289 1550,1289" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1283" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">rcsn[1]</text>
+<text x="1563" y="1284" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN3_m1</text>
+<polyline points="1550,1289 1790,1289" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1294" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN3_m1</text>
+<polyline points="950,1316 1550,1316" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1310" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">wcsn[1]</text>
+<text x="1563" y="1311" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WCSN_m1</text>
+<polyline points="1550,1316 1790,1316" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1321" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WCSN_m1</text>
+<polyline points="950,1343 1550,1343" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1337" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">wcsn[1]</text>
+<text x="1563" y="1338" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WEN_m1</text>
+<polyline points="1550,1343 1790,1343" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1348" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WEN_m1</text>
+<polyline points="950,1370 1550,1370" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1364" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">mask_q</text>
+<text x="1563" y="1365" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">M_m1</text>
+<polyline points="1550,1370 1790,1370" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1375" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">M_m1</text>
+<polyline points="950,1397 1550,1397" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1391" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">compute_mask_q</text>
+<text x="1563" y="1392" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">compute_mask_m1</text>
+<polyline points="1550,1397 1790,1397" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1402" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">compute_mask_m1</text>
+<polyline points="950,1424 1550,1424" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1418" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">sign_q</text>
+<text x="1563" y="1419" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">sign_8b_m1</text>
+<polyline points="1550,1424 1790,1424" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1429" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">sign_8b_m1</text>
+<polyline points="950,1451 1550,1451" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1445" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">inp_push</text>
+<text x="1563" y="1446" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">inp_push</text>
+<polyline points="1550,1451 1790,1451" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1456" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">inp_push</text>
+<polyline points="950,1478 1550,1478" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1472" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">input_i.data</text>
+<text x="1563" y="1473" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">inp_data</text>
+<polyline points="1550,1478 1790,1478" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1483" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">inp_data</text>
+<polyline points="950,1505 1550,1505" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1499" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">wgt_push</text>
+<text x="1563" y="1500" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">wgt_push</text>
+<polyline points="1550,1505 1790,1505" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1510" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">wgt_push</text>
+<polyline points="950,1532 1550,1532" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1526" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">kernel_i.data</text>
+<text x="1563" y="1527" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">wgt_data</text>
+<polyline points="1550,1532 1790,1532" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1537" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">wgt_data</text>
+<polyline points="950,1559 1550,1559" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="1200" y="1553" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">acc_clear</text>
+<text x="1563" y="1554" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">clear</text>
+<text x="1570" y="1582" font-family="DejaVu Sans, sans-serif" font-size="13" text-anchor="start" fill="#172033">clear → local clear net</text>
+<polyline points="1550,1635 950,1635" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="1563" y="1628" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">inp_full</text>
+<text x="1200" y="1628" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="middle" fill="#172033">inp_full</text>
+<polyline points="1790,1635 1550,1635" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1628" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">inp_full</text>
+<polyline points="1550,1667 950,1667" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="1563" y="1660" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">inp_empty</text>
+<text x="1200" y="1660" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="middle" fill="#172033">inp_empty</text>
+<polyline points="1790,1667 1550,1667" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1660" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">inp_empty</text>
+<polyline points="1550,1699 950,1699" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="1563" y="1692" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">wgt_full</text>
+<text x="1200" y="1692" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="middle" fill="#172033">wgt_full</text>
+<polyline points="1790,1699 1550,1699" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1692" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">wgt_full</text>
+<polyline points="1550,1731 950,1731" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="1563" y="1724" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">wgt_empty</text>
+<text x="1200" y="1724" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="middle" fill="#172033">wgt_empty</text>
+<polyline points="1790,1731 1550,1731" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="1803" y="1724" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">wgt_empty</text>
+<polyline points="1550,1763 950,1763" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="1563" y="1756" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">result_pop_o</text>
+<text x="1200" y="1756" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="middle" fill="#172033">result_pop</text>
+<rect x="1790" y="435" width="370" height="1345" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+<text transform="translate(2100,1000) rotate(-90)" font-family="DejaVu Sans" font-size="24" text-anchor="middle" fill="#172033">spatz_dimc_dual · u_dimc_dual</text>
+<text x="1803" y="457" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">clk</text>
+<text x="1803" y="484" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">rst_n</text>
+<text x="1803" y="511" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">sel</text>
+<text x="1803" y="538" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">COMPE_m0</text>
+<text x="1803" y="565" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">FCSN_m0</text>
+<text x="1803" y="592" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">MODE_m0</text>
+<text x="1803" y="619" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">FA_m0</text>
+<text x="1803" y="646" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">ADDIN_m0</text>
+<text x="1803" y="673" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RA_m0</text>
+<text x="1803" y="700" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WA_m0</text>
+<text x="1803" y="727" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN_m0</text>
+<text x="1803" y="754" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN0_m0</text>
+<text x="1803" y="781" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN1_m0</text>
+<text x="1803" y="808" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN2_m0</text>
+<text x="1803" y="835" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN3_m0</text>
+<text x="1803" y="862" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WCSN_m0</text>
+<text x="1803" y="889" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WEN_m0</text>
+<text x="1803" y="916" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">M_m0</text>
+<text x="1803" y="943" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">compute_mask_m0</text>
+<text x="1803" y="970" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">sign_8b_m0</text>
+<text x="1803" y="997" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">COMPE_m1</text>
+<text x="1803" y="1024" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">FCSN_m1</text>
+<text x="1803" y="1051" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">MODE_m1</text>
+<text x="1803" y="1078" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">FA_m1</text>
+<text x="1803" y="1105" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">ADDIN_m1</text>
+<text x="1803" y="1132" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RA_m1</text>
+<text x="1803" y="1159" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WA_m1</text>
+<text x="1803" y="1186" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN_m1</text>
+<text x="1803" y="1213" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN0_m1</text>
+<text x="1803" y="1240" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN1_m1</text>
+<text x="1803" y="1267" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN2_m1</text>
+<text x="1803" y="1294" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">RCSN3_m1</text>
+<text x="1803" y="1321" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WCSN_m1</text>
+<text x="1803" y="1348" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">WEN_m1</text>
+<text x="1803" y="1375" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">M_m1</text>
+<text x="1803" y="1402" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">compute_mask_m1</text>
+<text x="1803" y="1429" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">sign_8b_m1</text>
+<text x="1803" y="1456" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">inp_push</text>
+<text x="1803" y="1483" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">inp_data</text>
+<text x="1803" y="1510" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">wgt_push</text>
+<text x="1803" y="1537" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">wgt_data</text>
+<text x="1803" y="1628" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">inp_full</text>
+<text x="1803" y="1660" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">inp_empty</text>
+<text x="1803" y="1692" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">wgt_full</text>
+<text x="1803" y="1724" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">wgt_empty</text>
+<rect x="2390" y="570" width="360" height="270" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+<text x="2570" y="610" font-family="DejaVu Sans, sans-serif" font-size="24" text-anchor="middle" fill="#172033">cleopatra_ctrl</text>
+<text x="2570" y="638" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="middle" fill="#172033">u_ctrl</text>
+<rect x="2830" y="1010" width="350" height="380" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/>
+<text x="3005" y="1050" font-family="DejaVu Sans, sans-serif" font-size="23" text-anchor="middle" fill="#172033">accumulator × 256</text>
+<text x="3005" y="1078" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="middle" fill="#172033">gen_accumulators[i]</text>
+<text x="3005" y="1104" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="middle" fill="#172033">u_accumulator</text>
+<polyline points="2160,1150 2830,1150" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#end)"/>
+<text x="2145" y="1136" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">out_data</text>
+<text x="2470" y="1136" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="middle" fill="#172033">out_data [31:0]</text>
+<text x="2843" y="1140" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">data_i</text>
+<rect x="2360" y="1460" width="390" height="90" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+<text x="2555" y="1494" font-family="DejaVu Sans, sans-serif" font-size="20" text-anchor="middle" fill="#172033">out_pop = ~out_empty</text>
+<text x="2555" y="1525" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">Combinational logic</text>
+<polyline points="2160,1495 2360,1495" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="2145" y="1482" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">out_empty</text>
+<text x="2260" y="1482" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="middle" fill="#172033">out_empty</text>
+<polyline points="2750,1510 2890,1510" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="2898" y="1515" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="start" fill="#172033">out_pop</text>
+<polyline points="2300,1420 2160,1420" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="2300" y="1405" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">out_pop</text>
+<text x="2145" y="1405" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">out_pop</text>
+<polyline points="2280,790 2390,790" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="2270" y="780" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">out_pop</text>
+<text x="2403" y="780" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">out_pop</text>
+<polyline points="1710,1763 1550,1763" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="1580" y="1790" font-family="DejaVu Sans, sans-serif" font-size="14" text-anchor="start" fill="#172033">out_pop → result_pop_o</text>
+<polyline points="2750,740 2790,740 2790,920 2925,920" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="2735" y="726" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">acc_sel_o</text>
+<text x="2805" y="861" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">acc_sel [255:0]</text>
+<rect x="2925" y="875" width="275" height="95" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+<text x="3062" y="905" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="middle" fill="#172033">acc_enable =</text>
+<text x="3062" y="933" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="middle" fill="#172033">out_pop &amp; acc_sel[i]</text>
+<polyline points="3200,820 3120,820 3120,875" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="3200" y="803" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">out_pop</text>
+<polyline points="3060,970 3060,1010" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#end)"/>
+<text x="3075" y="996" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">enable_i</text>
+<polyline points="2240,670 2390,670" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="2230" y="663" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">clk</text>
+<text x="2403" y="663" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">clk</text>
+<polyline points="2240,710 2390,710" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="2230" y="703" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">rst_n</text>
+<text x="2403" y="703" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">rst_n</text>
+<polyline points="2240,750 2390,750" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="2230" y="743" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">clear</text>
+<text x="2403" y="743" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">clear</text>
+<polyline points="2700,1210 2830,1210" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="2690" y="1203" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">clk</text>
+<text x="2843" y="1203" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">clk_i</text>
+<polyline points="2700,1270 2830,1270" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="2690" y="1263" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">rst_n</text>
+<text x="2843" y="1263" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">rst_ni</text>
+<polyline points="2700,1330 2830,1330" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="2690" y="1323" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">clear</text>
+<text x="2843" y="1323" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">clear_i</text>
+<polyline points="2160,480 2300,480" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="2145" y="472" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">READYN</text>
+<text x="2310" y="485" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">READYN (unused)</text>
+<polyline points="2160,525 2300,525" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="2145" y="517" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">PSOUT</text>
+<text x="2310" y="530" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">PSOUT (unused)</text>
+<polyline points="2160,570 2300,570" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#end)"/>
+<text x="2145" y="562" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">out_full</text>
+<text x="2310" y="575" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">out_full (unused)</text>
+<polyline points="3180,1180 3260,1180" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="3165" y="1170" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">acc_o</text>
+<text x="3200" y="1206" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">acc_o[i]</text>
+<rect x="3370" y="1110" width="220" height="135" fill="#f0fdf4" stroke="#22c55e" stroke-width="2"/>
+<text x="3480" y="1145" font-family="DejaVu Sans, sans-serif" font-size="20" text-anchor="middle" fill="#172033">Result mapping</text>
+<text x="3480" y="1172" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">Combinational wiring</text>
+<text x="3480" y="1204" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="middle" fill="#172033">acc[c*32+r]</text>
+<polyline points="3260,1180 3370,1180" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="3270" y="1167" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">acc_o → acc</text>
+<polyline points="3590,1180 3840,1180" fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#end)"/>
+<text x="3740" y="1164" font-family="DejaVu Sans, sans-serif" font-size="21" text-anchor="middle" fill="#172033">result_o</text>
+<text x="3740" y="1210" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">[0:31][0:7] × 32 bits</text>
+<text x="2350" y="1640" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="start" fill="#172033">Inside Cleopatra:</text>
+<text x="2350" y="1672" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="start" fill="#172033">clk / rst_n feed all instantiated children.</text>
+<text x="2350" y="1704" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="start" fill="#172033">clear resets the selector and accumulators only.</text>
+<text x="2350" y="1736" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="start" fill="#172033">Repeated net labels denote connected wires.</text>
+<text x="2350" y="1768" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="start" fill="#172033">The accumulator rectangle represents 256 instances.</text>
+<text x="618" y="1570" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="start" fill="#172033">Configuration registers</text>
+<text x="618" y="1598" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="start" fill="#172033">Main FSM + compute FSM</text>
+<text x="618" y="1626" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="start" fill="#172033">Tile / transfer counters</text>
+<text x="618" y="1654" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="start" fill="#172033">Macro control generation</text>
+<text x="618" y="1682" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="start" fill="#172033">Stream handshake logic</text>
+<text x="618" y="1730" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">No extra input data buffer:</text>
+<text x="618" y="1754" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">input_i.data / kernel_i.data</text>
+<text x="618" y="1778" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">wire directly to Cleopatra.</text>
+<text x="325" y="1840" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="start" fill="#172033">i_cleopatra is expanded to show u_dimc_dual, u_ctrl, and the 256 generated accumulator instances.</text>
+<text x="325" y="1872" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="start" fill="#172033">Stream interface arrows include both incoming data/valid and outgoing ready; the interfaces are not additional modules.</text>
+<text x="320" y="1940" font-family="DejaVu Sans, sans-serif" font-size="19" text-anchor="start" fill="#172033">Reset: core_rst_n = rst_ni &amp; ~clear_i (feeds local registers and i_cleopatra.rst_n).</text>
+<text x="320" y="1972" font-family="DejaVu Sans, sans-serif" font-size="19" text-anchor="start" fill="#172033">Tile clear: acc_clear = (state_q == CLEAR_TILE) || (state_q == IDLE &amp;&amp; start_i).</text>
+<text x="320" y="2004" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="start" fill="#172033">Result mapping: result_o[r][c] = acc[c*32+r]. result_pop counts scalar FIFO transfers, not external tile acceptance.</text>
+<text x="320" y="2036" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="start" fill="#172033">Child parameters: SECTION_WIDTH, INP_FIFO_DEPTH, WGT_FIFO_DEPTH, OUT_FIFO_DEPTH inherit the parent parameters.</text>
+</svg>

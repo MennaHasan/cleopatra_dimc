@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1200" viewBox="0 0 1800 1200">
+<defs>
+<marker id="end" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#334155"/></marker>
+<marker id="start" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10 0 L0 5 L10 10 Z" fill="#334155"/></marker></defs>
+<rect width="1800" height="1200" fill="white"/>
+<text x="900" y="42" font-family="DejaVu Sans, sans-serif" font-size="28" text-anchor="middle" fill="#172033">dimc_ctrl — hardware block diagram</text>
+<rect x="160" y="145" width="1380" height="885" fill="white" stroke="#64748b" stroke-width="2"/>
+<text x="185" y="181" font-family="DejaVu Sans, sans-serif" font-size="24" text-anchor="start" fill="#172033">dimc_ctrl</text>
+<text x="185" y="208" font-family="DejaVu Sans, sans-serif" font-size="14" text-anchor="start" fill="#64748b">Parent-module boundary</text>
+<rect x="310" y="350" width="370" height="430" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+<text x="495" y="390" font-family="DejaVu Sans, sans-serif" font-size="24" text-anchor="middle" fill="#172033">hwpe_ctrl_slave</text>
+<text x="495" y="417" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="middle" fill="#172033">i_slave</text>
+<rect x="1020" y="350" width="360" height="570" fill="#f5f0ff" stroke="#8b5cf6" stroke-width="2"/>
+<text x="1200" y="390" font-family="DejaVu Sans, sans-serif" font-size="23" text-anchor="middle" fill="#172033">Local controller logic</text>
+<text x="1200" y="418" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="middle" fill="#172033">RTL inside dimc_ctrl</text>
+<text x="1200" y="442" font-family="DejaVu Sans, sans-serif" font-size="14" text-anchor="middle" fill="#172033">(not an instantiated module)</text>
+<polyline points="400,80 400,350" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="412" y="105" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="start" fill="#172033">clk_i</text>
+<text x="412" y="336" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">clk_i</text>
+<polyline points="400,250 1110,250 1110,350" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#end)"/>
+<circle cx="400" cy="250" r="4" fill="#334155"/>
+<text x="1122" y="336" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">clk_i</text>
+<polyline points="560,80 560,350" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="572" y="105" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="start" fill="#172033">rst_ni</text>
+<text x="572" y="336" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">rst_ni</text>
+<polyline points="560,295 1270,295 1270,350" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#end)"/>
+<circle cx="560" cy="295" r="4" fill="#334155"/>
+<text x="1282" y="336" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">rst_ni</text>
+<polyline points="40,485 310,485" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#end)" marker-start="url(#start)"/>
+<text x="45" y="467" font-family="DejaVu Sans, sans-serif" font-size="20" text-anchor="start" fill="#172033">periph</text>
+<text x="325" y="477" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="start" fill="#172033">cfg</text>
+<text x="45" y="511" font-family="DejaVu Sans, sans-serif" font-size="14" text-anchor="start" fill="#172033">HWPE peripheral interface</text>
+<text x="665" y="533" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">reg_file</text>
+<polyline points="680,545 1020,545" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="850" y="533" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="middle" fill="#172033">reg_file</text>
+<text x="665" y="603" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">flags_o</text>
+<polyline points="680,615 1020,615" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="850" y="603" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="middle" fill="#172033">slave_flags</text>
+<text x="665" y="673" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">clear_o</text>
+<polyline points="680,685 1020,685" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="850" y="673" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="middle" fill="#172033">soft_clear</text>
+<text x="1035" y="565" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Decode / validate configuration</text>
+<text x="1035" y="590" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">programmed → config_q</text>
+<text x="1035" y="640" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Start: slave_flags.start</text>
+<text x="1035" y="710" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Abort / clear sequencing</text>
+<polyline points="495,780 495,802" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="510" y="762" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">counter_pending</text>
+<text x="510" y="800" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="start" fill="#172033">unconnected</text>
+<text x="325" y="735" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="start" fill="#172033">ctrl_i</text>
+<polyline points="1020,825 245,825 245,740 310,740" fill="none" stroke="#7c3aed" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="710" y="813" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="middle" fill="#172033">slave_ctrl</text>
+<text x="710" y="850" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="middle" fill="#172033">done, evt, ext_flags</text>
+<polyline points="750,615 750,225 1700,225" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#end)"/>
+<circle cx="750" cy="615" r="4" fill="#334155"/>
+<text x="1100" y="213" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="middle" fill="#172033">slave_flags.evt[N_CORES-1:0]</text>
+<text x="1570" y="212" font-family="DejaVu Sans, sans-serif" font-size="20" text-anchor="start" fill="#172033">evt_o</text>
+<polyline points="1380,480 1740,480" fill="none" stroke="#7c3aed" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="1555" y="468" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="middle" fill="#172033">config_o</text>
+<text x="1365" y="468" font-family="DejaVu Sans, sans-serif" font-size="16" text-anchor="end" fill="#172033">config_q</text>
+<polyline points="1380,550 1740,550" fill="none" stroke="#7c3aed" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="1555" y="538" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="middle" fill="#172033">datapath_start_o</text>
+<polyline points="1380,620 1740,620" fill="none" stroke="#7c3aed" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="1555" y="608" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="middle" fill="#172033">streamer_start_o</text>
+<polyline points="1380,690 1740,690" fill="none" stroke="#7c3aed" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="1555" y="678" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="middle" fill="#172033">clear_o</text>
+<polyline points="1380,760 1740,760" fill="none" stroke="#7c3aed" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="1555" y="748" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="middle" fill="#172033">abort_o</text>
+<polyline points="1380,830 1740,830" fill="none" stroke="#7c3aed" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="1555" y="818" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="middle" fill="#172033">busy_o</text>
+<polyline points="1070,1100 1070,920" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="1058" y="1095" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">datapath_ready_i</text>
+<polyline points="1200,1140 1200,920" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="1188" y="1135" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">datapath_done_i</text>
+<polyline points="1330,1180 1330,920" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#end)"/>
+<text x="1318" y="1175" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">streamer_flags_i</text>
+<text x="1035" y="890" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Job FSM / completion tracking</text>
+<text x="185" y="951" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Only instantiated child: i_slave. The second block represents local RTL.</text>
+<text x="185" y="982" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Dots mark branches; crossings without dots are not connections.</text>
+<text x="185" y="1008" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">evt_o: N_CORES × REGFILE_N_EVT bits. config_o: dimc_config_t.</text>
+<text x="185" y="1067" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="start" fill="#172033">i_slave parameter connections</text>
+<text x="185" y="1095" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">N_CORES=N_CORES; N_CONTEXT=N_CONTEXT;</text>
+<text x="185" y="1120" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">N_IO_REGS=DIMC_NB_REGS; N_GENERIC_REGS=0;</text>
+<text x="185" y="1145" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">ID_WIDTH=ID; REGFILE_SCM=0.</text>
+</svg>

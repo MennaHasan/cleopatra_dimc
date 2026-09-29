@@ -307,7 +307,7 @@ module tb_dimc_top;
   hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) weight_mem (.clk(clk));
   hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) output_mem (.clk(clk));
   dimc_top i_dut (
-    .clk_i(clk), .rst_ni(rst_n), .test_mode_i(1'b0), .busy_o(busy), .evt_o(evt),
+    .clk_i(clk), .rst_ni(rst_n), .busy_o(busy), .evt_o(evt),
     .periph, .input_tcdm(input_mem), .kernel_tcdm(weight_mem), .output_tcdm(output_mem)
   );
   // +TIMING_ONLY selects one complete job instead of the multi-job regression.

@@ -86,7 +86,6 @@ logic [9:0]  pipeline_compute_mask;
 logic [ROW_WIDTH-1:0] masked_kernel;
 logic [ROW_WIDTH-1:0] masked_feature;
 logic signed [31:0] comp_result;
-logic [ROW_WIDTH-1:0] xnor_result;
 logic [10:0] popcount;
 logic [1:0] k_val2b;
 logic [1:0] f_val2b;

@@ -15,7 +15,7 @@ module dimc_top
   parameter hci_size_parameter_t KERNEL_SIZE = '{DW:256, AW:32, BW:8, UW:1, IW:1, EW:0, EHW:0},
   parameter hci_size_parameter_t OUTPUT_SIZE = '{DW:256, AW:32, BW:8, UW:1, IW:1, EW:0, EHW:0}
 )(
-  input logic clk_i, rst_ni, test_mode_i,
+  input logic clk_i, rst_ni,
   output logic busy_o,
   output logic [N_CORES-1:0][REGFILE_N_EVT-1:0] evt_o,
   hwpe_ctrl_intf_periph.slave periph,
@@ -32,7 +32,7 @@ module dimc_top
   hwpe_stream_intf_stream #(.DATA_WIDTH(256)) kernel_stream (.clk(clk_i));
 
   dimc_ctrl #(.N_CORES(N_CORES), .N_CONTEXT(N_CONTEXT), .ID(ID)) i_ctrl (
-    .clk_i, .rst_ni, .test_mode_i, .periph, .evt_o, .config_o(config_),
+    .clk_i, .rst_ni, .periph, .evt_o, .config_o(config_),
     .datapath_start_o(dp_start), .streamer_start_o(stream_start),
     .clear_o(clear), .abort_o(abort_job), .busy_o,
     .datapath_ready_i(dp_ready), .datapath_done_i(dp_done), .streamer_flags_i(streamer_flags)
@@ -44,12 +44,12 @@ module dimc_top
     .mode_i(config_.mode), .sign_8b_i(config_.sign_8b), .bias_i(config_.bias),
     .write_mask_i(config_.write_mask), .compute_mask_i(config_.compute_mask),
     .input_i(input_stream), .kernel_i(kernel_stream),
-    .ready_o(dp_ready), .busy_o(), .done_o(dp_done), .result_o(result),
-    .result_valid_o(result_valid), .result_ready_i(result_ready), .result_k_o(), .result_q_o()
+    .ready_o(dp_ready), .done_o(dp_done), .result_o(result),
+    .result_valid_o(result_valid), .result_ready_i(result_ready)
   );
   dimc_streamer #(.INPUT_SIZE(INPUT_SIZE), .KERNEL_SIZE(KERNEL_SIZE), .OUTPUT_SIZE(OUTPUT_SIZE))
   i_streamer (
-    .clk_i, .rst_ni, .test_mode_i, .clear_i(clear), .abort_i(abort_job), .start_i(stream_start),
+    .clk_i, .rst_ni, .clear_i(clear), .abort_i(abort_job), .start_i(stream_start),
     .config_i(config_), .flags_o(streamer_flags), .input_tcdm, .kernel_tcdm, .output_tcdm,
     .input_o(input_stream), .kernel_o(kernel_stream),
     .result_i(result), .result_valid_i(result_valid), .result_ready_o(result_ready)

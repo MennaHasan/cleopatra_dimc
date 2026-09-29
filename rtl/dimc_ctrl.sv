@@ -11,7 +11,7 @@ module dimc_ctrl
   parameter int unsigned N_CONTEXT = 2,
   parameter int unsigned ID = 10
 )(
-  input logic clk_i, rst_ni, test_mode_i,
+  input logic clk_i, rst_ni,
   hwpe_ctrl_intf_periph.slave periph,
   output logic [N_CORES-1:0][REGFILE_N_EVT-1:0] evt_o,
   output dimc_config_t config_o,

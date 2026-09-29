@@ -36,9 +36,8 @@ module tb_dimc_datapath;
   always #5ns clk = ~clk;
   logic rst_n = 0, clear = 0, start = 0;
   logic [31:0] weight_rows, weight_cols, input_rows, input_cols;
-  logic ready, busy, done, result_valid, result_ready = 0;
+  logic ready, done, result_valid, result_ready = 0;
   logic [31:0] result [0:31][0:7];
-  logic [31:0] result_k, result_q;
   // Each stream carries data, byte strobes, valid (sender has data), and ready
   // (receiver can accept it). A rising edge with valid && ready transfers one
   // BEAT = 256 bits = 32 eight-bit matrix elements, not a whole tile.
@@ -53,9 +52,8 @@ module tb_dimc_datapath;
     .mode_i(2'b11), .sign_8b_i(2'b00), .bias_i(32'd0),
     .write_mask_i({256{1'b1}}), .compute_mask_i(10'd0),
     .input_i(input_stream), .kernel_i(kernel_stream),
-    .ready_o(ready), .busy_o(busy), .done_o(done),
-    .result_o(result), .result_valid_o(result_valid), .result_ready_i(result_ready),
-    .result_k_o(result_k), .result_q_o(result_q)
+    .ready_o(ready), .done_o(done),
+    .result_o(result), .result_valid_o(result_valid), .result_ready_i(result_ready)
   );
 
   // Fixed SOURCE DATASET dimensions: K=4, L=3, Q=2.
@@ -139,7 +137,7 @@ module tb_dimc_datapath;
     for (int k = 0; k < nk; k++) begin
       for (int q = 0; q < nq; q++) begin
         do @(negedge clk); while (!result_valid);
-        assert (result_k == k && result_q == q && busy && !done)
+        assert (i_dut.k_q == k && i_dut.q_q == q && ready && !done)
           else $fatal(1, "Wrong output coordinates or status");
         for (int r = 0; r < 32; r++) begin
           for (int c = 0; c < 8; c++) begin
@@ -166,7 +164,7 @@ module tb_dimc_datapath;
         // Consumer stalls must preserve both the entire tile and its coordinates.
         repeat (11) begin
           @(negedge clk);
-          assert (result_valid && !done && busy && result_k == k && result_q == q)
+          assert (result_valid && !done && ready && i_dut.k_q == k && i_dut.q_q == q)
             else $fatal(1, "Result/status changed under backpressure");
           for (int r = 0; r < 32; r++)
             for (int c = 0; c < 8; c++)
@@ -179,11 +177,11 @@ module tb_dimc_datapath;
         result_ready = 0;
       end
     end
-    // Completion must follow acceptance of the LAST tile, with busy low and
+    // Completion must follow acceptance of the LAST tile, with ready low and
     // no pending result. A further cycle checks that done does not stay high.
     wait (done);
     @(negedge clk);
-    assert (!busy && !result_valid) else $fatal(1, "Job failed to complete");
+    assert (!ready && !result_valid) else $fatal(1, "Job failed to complete");
     @(negedge clk);
     assert (!done) else $fatal(1, "done must be a pulse");
   endtask
@@ -201,7 +199,7 @@ module tb_dimc_datapath;
     start = 1;
     @(negedge clk);
     start = 0;
-    assert (ready && busy) else $fatal(1, "Setup did not become ready");
+    assert (ready) else $fatal(1, "Setup did not become ready");
     // External dimensions need not remain stable after the command is accepted.
     weight_rows = 0;
     weight_cols = 0;
@@ -258,7 +256,7 @@ module tb_dimc_datapath;
     repeat (3) @(negedge clk);
     clear = 1;
     @(negedge clk);
-    assert (!busy && !result_valid && !input_stream.ready && !kernel_stream.ready)
+    assert (!ready && !result_valid && !input_stream.ready && !kernel_stream.ready)
       else $fatal(1, "Clear did not abort the job");
     clear = 0;
     run_job(1, 1, 1, 2);

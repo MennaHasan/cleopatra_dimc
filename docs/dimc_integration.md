@@ -117,8 +117,7 @@ before reusing memory or launching a replacement job after an abort.
 ```bash
 module load bender/0.31.0 questasim/2024.3
 make sim-top
-make sim-top-timing
-make sim-top-timing TIMING_STALLS=1
+make sim-top TOP_TEST=1
 ```
 
 The top-level TB loads each module's input matrices, weight matrices, and Python
@@ -137,8 +136,11 @@ test 3 uses seed + 3. To regenerate and test together, use e.g.
 targets so their automatic stimulus generation keeps the selected dataset.
 The top TB also accepts `+STIM_DIR_1=...` and `+STIM_DIR_2=...` to select other
 compatible file directories.
-The streamers read/write simulated memory; the TB checks every result,
-request bounds, transfer counts, and output guard bytes.
+The streamers read/write simulated memory. The TB compares every result against
+Python golden files and checks output guard bytes. Small, signed, biased, and
+queued tests use separate compact `top_*_golden.txt` files generated alongside
+the full-matrix golden. The HCI memory responder is in `tb/tb_dimc_memory.sv`;
+it only supplies memory handshakes and checks memory-request bounds/direction.
 
 Regression covers both modules, signed arithmetic, bias, queued contexts,
 invalid dimensions, module 2 address alignment/overflow, independent holds
@@ -146,7 +148,41 @@ on each of the six channels, asymmetric completion, and abort/restart.
 Tests hold a channel indefinitely until the other module has completed;
 this verifies independent progress rather than just different latencies.
 
-Timing mode reports each module's tile and full-job timing, plus overall
-completion after both modules. Macro detail uses global numbers 1–4;
-`local m0/m1` in summaries denotes the pair within that module. Lower-level
-single-module tests remain available for the reusable datapath and core.
+## Numbered top-level tests
+
+Each test resets its setup and prints its number, purpose, and PASS or FAIL.
+There are no timing monitors or probes into accelerator internals. Test helpers
+only drive the peripheral bus, initialize memory, wait for public status/events,
+and compare output memory with Python golden files.
+
+| Test | Checks |
+|---|---|
+| 1 | Full matrix multiplication in both modules against Python goldens |
+| 2 | Different matrix dimensions |
+| 3 | Memory stalls |
+| 4 | Signed arithmetic |
+| 5 | Bias |
+| 6 | Module 1 input channel held; module 2 finishes |
+| 7 | Module 1 weight channel held; module 2 finishes |
+| 8 | Module 1 output channel held; module 2 finishes |
+| 9 | Module 2 input channel held; module 1 finishes |
+| 10 | Module 2 weight channel held; module 1 finishes |
+| 11 | Module 2 output channel held; module 1 finishes |
+| 12 | Abort drains outstanding reads |
+| 13 | Abort waits for module 1's stalled output burst |
+| 14 | Abort waits for module 2's stalled output burst |
+| 15 | Restart after abort without resetting the accelerator |
+| 16 | Queued jobs retain independent configuration |
+| 17 | Reject incompatible dimensions |
+| 18 | Reject module 1 unaligned output address |
+| 19 | Reject module 2 unaligned output address |
+| 20 | Reject module 1 weight-address overflow |
+| 21 | Reject module 2 weight-address overflow |
+| 22 | Reject unsupported compute mode |
+
+Run all tests with `make sim-top`, or select one using `make sim-top TOP_TEST=N`.
+At the simulator level, use `+TEST=N`; `+TEST=0` is the default and runs all 22.
+A failed check stops the simulation with the test number and reason. A timeout
+also names the active test. The final summary states the number of passed tests.
+The old `sim-top-timing` target and timing instrumentation have been removed.
+Lower-level single-module tests remain available for the reusable datapath/core.

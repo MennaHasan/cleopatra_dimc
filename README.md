@@ -25,7 +25,7 @@ STEPS:
    module load bender/0.31.0
    module load questasim
 2. comment or uncomment test defines to select comiled tests
-3. compile modules 
+3. compile modules
 4. run testbenches
    make hw-clean
    make hw-all
@@ -34,11 +34,14 @@ STEPS:
    make sim-cleopatra
    make sim-double-buffering
    make sim-datapath
-5. To use GUI
+
+make sim-top STIM_SEED=20261007
+
+1. To use GUI
    make sim-single GUI=1
    make sim-dual GUI=1
    make sim-cleopatra GUI=1
-6. Adding signals innside Questasim
+8. Adding signals innside Questasim
    A. for sim-dual
    restart -f
    env tb_dimc_dual
@@ -76,53 +79,31 @@ matrix.
 The regression covers independent holds on all six channels, runtime dimensions,
 signed arithmetic, bias, queued jobs, invalid configuration and module 2 addresses,
 and abort/restart during reads and writes, including asymmetric completion.
-Success prints `[DIMC_TOP] ALL TESTS PASSED`. No board or MAGIA build
+Success prints `[DIMC_TOP] ALL SELECTED TESTS PASSED`. No board or MAGIA build
 is required. `make sim-datapath` still runs the standalone datapath regression.
 
 See [the standalone integration guide](docs/dimc_integration.md) for the
 register map, memory-port widths, alignment, and software launch sequence.
 
-## Measure cycles for one job
+## Run numbered top-level tests
+
+`tb_dimc_top` contains 22 separate tests, each with a numbered description and
+PASS/FAIL result. Test 1 supplies both modules with full matrices and checks
+their outputs against Python golden files. The remaining tests each focus on
+one behavior: dimensions, memory stalls, signed arithmetic, bias, one held
+channel, abort/draining, restart, queued jobs, or invalid configuration.
+Timing monitors and internal RTL probes have been removed.
 
 ```bash
-make sim-top-timing
-# Same one-job experiment with simulated memory stalls:
-make sim-top-timing TIMING_STALLS=1
-# GUI is also supported:
-make sim-top-timing GUI=1
+# All 22 tests:
+make sim-top STIM_SEED=20261007
+# Test 1 only: one shared job, both modules checked against goldens:
+make sim-top TOP_TEST=1 STIM_SEED=20261007
+# Test 4 only: signed arithmetic:
+make sim-top TOP_TEST=4 STIM_SEED=20261007
 ```
 
-This runs one shared job with two independent matrix multiplications, each with
-weights **128x384**, inputs **384x16**,
-result **128x16** (`K=4, L=3, Q=2`). The terminal prints measured cumulative
-cycles when tile products 1–5 finish, full-job cycles including output writes,
-and the number of tile products completed by each of the four macros.
-Reports identify module 1 or 2 and include overall completion for both. They also
-print
-minimum/average/maximum weight-section latency from memory request to macro
-write, and from weight FIFO acceptance to macro write. Results still undergo
-the golden-matrix check.
-
-For each macro, the report also gives sample count and minimum/average/maximum
-cycles for:
-
-- Loading a full **32x128 weight tile**: its first memory request through its
-  last section written into the macro (not loading the entire large matrix).
-- Loading one input vector: first through fourth feature-buffer section write.
-- Computing one matvec: row 0 issued through its 32nd result accumulated.
-
-The vector measurement excludes memory fetching before the first feature write.
-Four consecutive section writes span **three elapsed cycles** under the same
-edge-difference convention used for all the timing measurements.
-
-Cycle zero is the rising edge accepting the datapath start. Tile completion
-is the edge accumulating its 256th result. Per-module completion remembers its
-datapath and streamer finishing; overall job completion is the controller's
-completion edge after both modules' writes. Latencies are edge differences
-(adjacent clock edges = one cycle). Memory-request timing begins on the first
-rising edge observing that request, including time waiting for a grant;
-FIFO timing begins when its data is accepted into the FIFO. These measurements
-include overlapping activity and should not be added together.
+See the [test list](docs/dimc_integration.md#numbered-top-level-tests).
 
 To regenerate all stimulus and golden files with a new reproducible seed:
 

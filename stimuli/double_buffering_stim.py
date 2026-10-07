@@ -116,6 +116,27 @@ def calculate_golden_matmul(weight_matrix: Matrix, input_matrix: Matrix) -> Matr
     ]
 
 
+def calculate_top_golden(
+    weights: Matrix, inputs: Matrix, nk: int, nl: int, nq: int,
+    sign_mode: int = 0, bias: int = 0,
+) -> Matrix:
+    """Golden for a top-level test using a subset of the full source matrices."""
+    def operand(value: int, signed: bool) -> int:
+        return value - 256 if signed and value >= 128 else value
+
+    return [
+        [
+            (sum(
+                operand(weights[r][n], bool(sign_mode & 1))
+                * operand(inputs[n][c], bool(sign_mode & 2))
+                for n in range(nl * N_ELEMENTS)
+            ) + nl * bias) & UINT32_MASK
+            for c in range(nq * P)
+        ]
+        for r in range(nk * M)
+    ]
+
+
 def write_matrix(path: Path, matrix: Matrix) -> None:
     with path.open("w", encoding="utf-8") as output:
         for row in matrix:
@@ -217,6 +238,20 @@ def main() -> None:
         args.outdir / "double_buffering_golden_matmul_output.txt",
         calculate_golden_matmul(kernel_stim, feature_stim),
     )
+
+    # Separate compact goldens keep tb_dimc_top focused on driving/checking.
+    # Each specification is (K, L, Q, sign_mode, bias).
+    top_tests = {
+        "top_small_golden.txt": (1, 1, 1, 0, 0),
+        "top_dimensions_golden.txt": (2, 1, 2, 0, 0),
+        "top_signed_golden.txt": (1, 2, 1, 3, 0),
+        "top_bias_golden.txt": (1, 2, 1, 0, -7),
+        "top_queued_first_golden.txt": (1, 2, 1, 0, 1),
+        "top_queued_second_golden.txt": (1, 2, 1, 3, -9),
+    }
+    for filename, settings in top_tests.items():
+        write_matrix(args.outdir / filename,
+                     calculate_top_golden(kernel_stim, feature_stim, *settings))
 
     print(f"Double-buffering stimulus written to {args.outdir.resolve()}")
 

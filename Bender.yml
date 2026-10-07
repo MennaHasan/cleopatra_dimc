@@ -17,6 +17,7 @@ sources:
       - rtl/dimc_datapath.sv
       - rtl/dimc_streamer.sv
       - rtl/dimc_ctrl.sv
+      - rtl/dimc_module.sv
       - rtl/dimc_top.sv
       - rtl/accumulator.sv
       - rtl/cleopatra_ctrl.sv

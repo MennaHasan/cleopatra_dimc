@@ -39,7 +39,7 @@
 <text x="665" y="673" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">clear_o</text>
 <polyline points="680,685 1020,685" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#end)"/>
 <text x="850" y="673" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="middle" fill="#172033">soft_clear</text>
-<text x="1035" y="565" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Decode / validate configuration</text>
+<text x="1035" y="565" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Validate shared config + both address sets</text>
 <text x="1035" y="590" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">programmed → config_q</text>
 <text x="1035" y="640" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Start: slave_flags.start</text>
 <text x="1035" y="710" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Abort / clear sequencing</text>
@@ -68,17 +68,17 @@
 <polyline points="1380,830 1740,830" fill="none" stroke="#7c3aed" stroke-width="2.2" marker-end="url(#end)"/>
 <text x="1555" y="818" font-family="DejaVu Sans, sans-serif" font-size="18" text-anchor="middle" fill="#172033">busy_o</text>
 <polyline points="1070,1100 1070,920" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#end)"/>
-<text x="1058" y="1095" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">datapath_ready_i</text>
+<text x="1058" y="1095" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">datapath_ready_i[1:0]</text>
 <polyline points="1200,1140 1200,920" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#end)"/>
-<text x="1188" y="1135" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">datapath_done_i</text>
+<text x="1188" y="1135" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">datapath_done_i[1:0]</text>
 <polyline points="1330,1180 1330,920" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#end)"/>
-<text x="1318" y="1175" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">streamer_flags_i</text>
-<text x="1035" y="890" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Job FSM / completion tracking</text>
+<text x="1318" y="1175" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="end" fill="#172033">streamer_flags_i[1:0]</text>
+<text x="1035" y="890" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Job FSM / per-module sticky completions</text>
 <text x="185" y="951" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Only instantiated child: i_slave. The second block represents local RTL.</text>
 <text x="185" y="982" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">Dots mark branches; crossings without dots are not connections.</text>
-<text x="185" y="1008" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">evt_o: N_CORES × REGFILE_N_EVT bits. config_o: dimc_config_t.</text>
+<text x="185" y="1008" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">evt_o: N_CORES × REGFILE_N_EVT bits. config_o: shared dimc_config_t with six addresses.</text>
 <text x="185" y="1067" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="start" fill="#172033">i_slave parameter connections</text>
 <text x="185" y="1095" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">N_CORES=N_CORES; N_CONTEXT=N_CONTEXT;</text>
-<text x="185" y="1120" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">N_IO_REGS=DIMC_NB_REGS; N_GENERIC_REGS=0;</text>
+<text x="185" y="1120" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">N_IO_REGS=DIMC_NB_REGS (21); N_GENERIC_REGS=0;</text>
 <text x="185" y="1145" font-family="DejaVu Sans, sans-serif" font-size="15" text-anchor="start" fill="#172033">ID_WIDTH=ID; REGFILE_SCM=0.</text>
 </svg>

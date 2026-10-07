@@ -12,7 +12,7 @@ module tb_dimc_memory_port #(
   parameter int DW=256, SALT=0,
   parameter bit WRITE_PORT=0
 )(
-  input logic clk_i, rst_ni, stalls_i,
+  input logic clk_i, rst_ni, stalls_i, hold_i,
   input logic [31:0] region_base_i, region_bytes_i,
   hci_core_intf.target port,
   output int transfers_o
@@ -29,7 +29,14 @@ module tb_dimc_memory_port #(
   logic [DW/8-1:0] saved_be;
   logic saved_wen;
   logic accepted, consumed;
-  assign port.gnt = rst_ni && port.req && queued<8 &&
+  // Change grant policy after the edge, like cycle/queue updates below. HCI's
+  // delayed assertion clock then observes the grant before the acceptance edge.
+  logic hold_q;
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) hold_q <= 0;
+    else hold_q <= hold_i;
+  end
+  assign port.gnt = rst_ni && port.req && !hold_q && queued<8 &&
                     (!stalls_i || (cycle+SALT)%5 != 0);
   assign port.r_valid = rst_ni && queued>0 && queue_[read_ptr].due <= cycle;
   assign port.r_data = queued>0 ? queue_[read_ptr].data : '0;
@@ -84,7 +91,7 @@ endmodule
 // Passive timing instrumentation: this module never drives the RTL. A cycle
 // timestamp is taken at each rising edge. Latency = end edge - start edge;
 // adjacent edges are one cycle apart (there is no extra inclusive +1).
-module tb_dimc_timing_monitor (
+module tb_dimc_timing_monitor #(parameter int MODULE_ID=1) (
   input logic clk_i, rst_ni, enable_i, stalls_i,
   input logic job_start_i, job_done_i,
   input wire dimc_package::dimc_config_t config_i,
@@ -131,10 +138,10 @@ module tb_dimc_timing_monitor (
   endtask
   task automatic print_stats(input int macro_id, input string label_, input latency_stats_t stats);
     if (stats.samples>0)
-      $display("[TIMING] Macro %0d %s: samples=%0d min=%0d avg=%0.3f max=%0d cycles",
-        macro_id,label_,stats.samples,stats.minimum,real'(stats.sum)/real'(stats.samples),stats.maximum);
+      $display("[TIMING module %0d] Macro %0d %s: samples=%0d min=%0d avg=%0.3f max=%0d cycles", MODULE_ID,
+        macro_id+2*(MODULE_ID-1)+1,label_,stats.samples,stats.minimum,real'(stats.sum)/real'(stats.samples),stats.maximum);
     else
-      $display("[TIMING] Macro %0d %s: samples=0 (no measurement)",macro_id,label_);
+      $display("[TIMING module %0d] Macro %0d %s: samples=0 (no measurement)", MODULE_ID,macro_id+2*(MODULE_ID-1)+1,label_);
   endtask
 
   always @(posedge clk_i) begin
@@ -169,12 +176,12 @@ module tb_dimc_timing_monitor (
         end
         expected_outputs=64'(config_i.weight_rows/32)*64'(config_i.input_cols/8);
         expected_products=expected_outputs*64'(config_i.weight_cols/128);
-        $display("[TIMING] ONE JOB: weights=%0dx%0d, inputs=%0dx%0d, result=%0dx%0d",
+        $display("[TIMING module %0d] ONE JOB: weights=%0dx%0d, inputs=%0dx%0d, result=%0dx%0d", MODULE_ID,
           config_i.weight_rows,config_i.weight_cols,config_i.input_rows,
           config_i.input_cols,config_i.weight_rows,config_i.input_cols);
-        $display("[TIMING] Clock=10 ns. Cycle 0 = datapath start accepted; memory stalls=%0d",
+        $display("[TIMING module %0d] Clock=10 ns. Cycle 0 = datapath start accepted; memory stalls=%0d", MODULE_ID,
           stalls_i);
-        $display("[TIMING] Cumulative tile milestones finish when the 256th result is accumulated.");
+        $display("[TIMING module %0d] Cumulative tile milestones finish when the 256th result is accumulated.", MODULE_ID);
       end
       if (measuring) begin
         // Timestamp the FIRST sampled assertion of each weight request, before
@@ -256,27 +263,27 @@ module tb_dimc_timing_monitor (
             products++;
             macro_products[active_macro_i]++;
             if (products<=5)
-              $display("[TIMING] %0d tile product(s) complete: %0d cumulative cycles (latest: macro %0d)",
-                products,cycle-start_cycle,active_macro_i);
+              $display("[TIMING module %0d] %0d tile product(s) complete: %0d cumulative cycles (latest: macro %0d)", MODULE_ID,
+                products,cycle-start_cycle,int'(active_macro_i)+2*(MODULE_ID-1)+1);
           end
         end
         if (output_tile_accept_i) output_tiles++;
-        // Controller completion follows the final output memory writes and the
-        // datapath completion. Its HWPE event is registered at this same edge.
+        // Per-module completion remembers its datapath and final memory writes.
+        // Overall HWPE completion can be later if the other module is slower.
         if (job_done_i) begin
           assert (products==expected_products && results_in_product==0 &&
                   output_tiles==expected_outputs && sections==expected_products*128 &&
                   request_times.size()==0 && fifo_times.size()==0 &&
                   matvec_starts.size()==0 && !request_waiting)
             else $fatal(1,"Incomplete timing samples at job completion");
-          $display("[TIMING] FULL MATRIX MULTIPLICATION complete: %0d cycles (including output writes)",
+          $display("[TIMING module %0d] FULL MATRIX MULTIPLICATION complete: %0d cycles (including output writes)", MODULE_ID,
             cycle-start_cycle);
-          $display("[TIMING] Completed: %0d tile products; macro 0=%0d, macro 1=%0d; output tiles=%0d",
+          $display("[TIMING module %0d] Completed: %0d tile products; local m0=%0d, local m1=%0d; output tiles=%0d", MODULE_ID,
             products,macro_products[0],macro_products[1],output_tiles);
-          $display("[TIMING] Weight sections measured: %0d (including repeated tile loads)",sections);
-          $display("[TIMING] Memory request -> macro write: min=%0d avg=%0.3f max=%0d cycles",
+          $display("[TIMING module %0d] Weight sections measured: %0d (including repeated tile loads)", MODULE_ID,sections);
+          $display("[TIMING module %0d] Memory request -> macro write: min=%0d avg=%0.3f max=%0d cycles", MODULE_ID,
             memory_min,real'(memory_sum)/real'(sections),memory_max);
-          $display("[TIMING] Weight FIFO acceptance -> macro write: min=%0d avg=%0.3f max=%0d cycles",
+          $display("[TIMING module %0d] Weight FIFO acceptance -> macro write: min=%0d avg=%0.3f max=%0d cycles", MODULE_ID,
             fifo_min,real'(fifo_sum)/real'(sections),fifo_max);
           for (int m=0; m<2; m++) begin
             assert (weight_tile_stats[m].samples==macro_products[m] &&
@@ -301,47 +308,90 @@ module tb_dimc_top;
   logic clk=0;
   always #5ns clk=~clk;
   logic rst_n=0, stalls=0, busy;
+  logic [1:0] hold_input='0, hold_weight='0, hold_output='0;
   logic [1:0][1:0] evt;
   hwpe_ctrl_intf_periph #(.ID_WIDTH(10)) periph (.clk(clk));
   hci_core_intf #(.DW(64), .IW(1), .EW(0), .EHW(0)) input_mem (.clk(clk));
   hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) weight_mem (.clk(clk));
   hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) output_mem (.clk(clk));
+  hci_core_intf #(.DW(64), .IW(1), .EW(0), .EHW(0)) input_mem_2 (.clk(clk));
+  hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) weight_mem_2 (.clk(clk));
+  hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) output_mem_2 (.clk(clk));
   dimc_top i_dut (
     .clk_i(clk), .rst_ni(rst_n), .busy_o(busy), .evt_o(evt),
-    .periph, .input_tcdm(input_mem), .kernel_tcdm(weight_mem), .output_tcdm(output_mem)
+    .periph, .input_tcdm(input_mem), .kernel_tcdm(weight_mem), .output_tcdm(output_mem),
+    .input_tcdm_2(input_mem_2), .kernel_tcdm_2(weight_mem_2), .output_tcdm_2(output_mem_2)
   );
   // +TIMING_ONLY selects one complete job instead of the multi-job regression.
   bit timing_only=$test$plusargs("TIMING_ONLY");
   int timing_stalls=0;
   tb_dimc_timing_monitor i_timing (
     .clk_i(clk), .rst_ni(rst_n), .enable_i(timing_only), .stalls_i(stalls),
-    .job_start_i(i_dut.dp_start), .job_done_i(i_dut.i_ctrl.slave_ctrl.done),
+    .job_start_i(i_dut.dp_start), .job_done_i(i_dut.i_ctrl.module_done[0]),
     .config_i(i_dut.config_), .memory_req_i(weight_mem.req), .memory_gnt_i(weight_mem.gnt),
-    .fifo_push_i(i_dut.i_datapath.wgt_push), .macro_write_i(i_dut.i_datapath.weight_load),
-    .load_macro_i(i_dut.i_datapath.load_macro),
-    .feature_load_i(~i_dut.i_datapath.fcsn), .feature_addr_i(i_dut.i_datapath.fa),
-    .compute_issue_i(i_dut.i_datapath.compe & ~i_dut.i_datapath.rcsn),
-    .compute_addr_i(i_dut.i_datapath.ra),
-    .result_pop_i(i_dut.i_datapath.result_pop), .active_macro_i(i_dut.i_datapath.active_q),
-    .output_tile_accept_i(i_dut.result_valid && i_dut.result_ready)
+    .fifo_push_i(i_dut.i_module_1.i_datapath.wgt_push), .macro_write_i(i_dut.i_module_1.i_datapath.weight_load),
+    .load_macro_i(i_dut.i_module_1.i_datapath.load_macro),
+    .feature_load_i(~i_dut.i_module_1.i_datapath.fcsn), .feature_addr_i(i_dut.i_module_1.i_datapath.fa),
+    .compute_issue_i(i_dut.i_module_1.i_datapath.compe & ~i_dut.i_module_1.i_datapath.rcsn),
+    .compute_addr_i(i_dut.i_module_1.i_datapath.ra),
+    .result_pop_i(i_dut.i_module_1.i_datapath.result_pop), .active_macro_i(i_dut.i_module_1.i_datapath.active_q),
+    .output_tile_accept_i(i_dut.i_module_1.result_valid && i_dut.i_module_1.result_ready)
   );
+  tb_dimc_timing_monitor #(.MODULE_ID(2)) i_timing_2 (
+    .clk_i(clk), .rst_ni(rst_n), .enable_i(timing_only), .stalls_i(stalls),
+    .job_start_i(i_dut.dp_start), .job_done_i(i_dut.i_ctrl.module_done[1]),
+    .config_i(i_dut.config_), .memory_req_i(weight_mem_2.req), .memory_gnt_i(weight_mem_2.gnt),
+    .fifo_push_i(i_dut.i_module_2.i_datapath.wgt_push), .macro_write_i(i_dut.i_module_2.i_datapath.weight_load),
+    .load_macro_i(i_dut.i_module_2.i_datapath.load_macro),
+    .feature_load_i(~i_dut.i_module_2.i_datapath.fcsn), .feature_addr_i(i_dut.i_module_2.i_datapath.fa),
+    .compute_issue_i(i_dut.i_module_2.i_datapath.compe & ~i_dut.i_module_2.i_datapath.rcsn),
+    .compute_addr_i(i_dut.i_module_2.i_datapath.ra),
+    .result_pop_i(i_dut.i_module_2.i_datapath.result_pop), .active_macro_i(i_dut.i_module_2.i_datapath.active_q),
+    .output_tile_accept_i(i_dut.i_module_2.result_valid && i_dut.i_module_2.result_ready)
+  );
+  longint unsigned timing_cycle=0, timing_start=0;
+  always @(posedge clk) if (rst_n && timing_only) begin
+    timing_cycle++;
+    if (i_dut.dp_start) timing_start=timing_cycle;
+    if (i_dut.i_ctrl.slave_ctrl.done)
+      $display("[TIMING] BOTH MODULES complete: %0d cycles including all output writes",
+               timing_cycle-timing_start);
+  end
   localparam int WBASE='h1000, IBASE='h11000, OBASE='h14000;
+  localparam int WBASE_2='h18000, IBASE_2='h28000, OBASE_2='h2b000;
   logic [31:0] weight_bytes, input_bytes, output_bytes;
   int input_count, weight_count, output_count, done_count=0;
+  int input_count_2, weight_count_2, output_count_2;
   tb_dimc_memory_port #(.DW(64), .SALT(1)) i_input_memory (
-    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .port(input_mem),
+    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .hold_i(hold_input[0]), .port(input_mem),
     .region_base_i(32'(IBASE)), .region_bytes_i(input_bytes), .transfers_o(input_count)
   );
   tb_dimc_memory_port #(.DW(256), .SALT(2)) i_weight_memory (
-    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .port(weight_mem),
+    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .hold_i(hold_weight[0]), .port(weight_mem),
     .region_base_i(32'(WBASE)), .region_bytes_i(weight_bytes), .transfers_o(weight_count)
   );
   tb_dimc_memory_port #(.DW(256), .SALT(3), .WRITE_PORT(1)) i_output_memory (
-    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .port(output_mem),
+    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .hold_i(hold_output[0]), .port(output_mem),
     .region_base_i(32'(OBASE)), .region_bytes_i(output_bytes), .transfers_o(output_count)
+  );
+  tb_dimc_memory_port #(.DW(64), .SALT(4)) i_input_memory_2 (
+    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .hold_i(hold_input[1]), .port(input_mem_2),
+    .region_base_i(32'(IBASE_2)), .region_bytes_i(input_bytes), .transfers_o(input_count_2)
+  );
+  tb_dimc_memory_port #(.DW(256), .SALT(5)) i_weight_memory_2 (
+    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .hold_i(hold_weight[1]), .port(weight_mem_2),
+    .region_base_i(32'(WBASE_2)), .region_bytes_i(weight_bytes), .transfers_o(weight_count_2)
+  );
+  tb_dimc_memory_port #(.DW(256), .SALT(6), .WRITE_PORT(1)) i_output_memory_2 (
+    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .hold_i(hold_output[1]), .port(output_mem_2),
+    .region_base_i(32'(OBASE_2)), .region_bytes_i(output_bytes), .transfers_o(output_count_2)
   );
   logic [7:0] weights [0:49151], inputs [0:6143];
   logic [31:0] golden [0:2047];
+  logic [7:0] weights_2 [0:49151], inputs_2 [0:6143];
+  logic [31:0] golden_2 [0:2047];
+  string stimulus_dir_1="stimuli/double_buffering";
+  string stimulus_dir_2="stimuli/double_buffering_module2";
   always @(negedge clk) if (evt[0][0]) done_count++;
   always @(posedge clk) if ($test$plusargs("TRACE_CONFIG") && i_dut.i_ctrl.slave_flags.start)
     $display("CONFIG valid=%b dims=%d,%d,%d,%d addr=%h,%h,%h mode=%b ends=%h,%h,%h",
@@ -351,6 +401,10 @@ module tb_dimc_top;
       i_dut.i_ctrl.programmed.input_addr, i_dut.i_ctrl.programmed.output_addr,
       i_dut.i_ctrl.programmed.mode, i_dut.i_ctrl.weight_end,
       i_dut.i_ctrl.input_end, i_dut.i_ctrl.output_end);
+
+  always @(posedge clk) if (rst_n && i_dut.i_ctrl.slave_ctrl.done && !i_dut.i_ctrl.error_q)
+    assert (i_dut.i_ctrl.module_done == 2'b11)
+      else $fatal(1,"Overall completion before both modules finished");
 
   // One software bus operation. HWPE-Ctrl uses wen=0 for writes, wen=1 reads.
   task automatic access(input bit read_, input int addr, input logic [31:0] data,
@@ -377,6 +431,9 @@ module tb_dimc_top;
     reg_write(DIMC_REG_INPUT_ADDR,IBASE);
     reg_write(DIMC_REG_KERNEL_ADDR,WBASE);
     reg_write(DIMC_REG_OUTPUT_ADDR,OBASE);
+    reg_write(DIMC_REG_INPUT_ADDR_2,IBASE_2);
+    reg_write(DIMC_REG_KERNEL_ADDR_2,WBASE_2);
+    reg_write(DIMC_REG_OUTPUT_ADDR_2,OBASE_2);
     reg_write(DIMC_REG_WEIGHT_ROWS,nk*32);
     reg_write(DIMC_REG_WEIGHT_COLS,nl*128);
     reg_write(DIMC_REG_INPUT_ROWS,nl*128);
@@ -397,42 +454,58 @@ module tb_dimc_top;
       for (int c=0;c<nl*128;c++) mem[WBASE+r*nl*128+c]=weights[r*384+c];
     for (int r=0;r<nl*128;r++)
       for (int c=0;c<nq*8;c++) mem[IBASE+r*nq*8+c]=inputs[r*16+c];
-    for (int b=-32;b<int'(output_bytes)+32;b++) mem[OBASE+b]='ha5;
+    for (int r=0;r<nk*32;r++)
+      for (int c=0;c<nl*128;c++) mem[WBASE_2+r*nl*128+c]=weights_2[r*384+c];
+    for (int r=0;r<nl*128;r++)
+      for (int c=0;c<nq*8;c++) mem[IBASE_2+r*nq*8+c]=inputs_2[r*16+c];
+    for (int b=-32;b<int'(output_bytes)+32;b++) begin
+      mem[OBASE+b]='ha5;
+      mem[OBASE_2+b]='ha5;
+    end
   endtask
 
   task automatic check_memory(input int nk,nl,nq, input int sign_mode=0,bias=0);
     logic [31:0] expected, got;
     int w,x;
-    for (int r=0;r<nk*32;r++) begin
-      for (int c=0;c<nq*8;c++) begin
-        expected=32'(nl*bias); // Cleopatra applies ADDIN once per inner tile.
-        for (int n=0;n<nl*128;n++) begin
-          w=int'(weights[r*384+n]); x=int'(inputs[n*16+c]);
-          if ((sign_mode&1)!=0 && w>=128) w-=256;
-          if ((sign_mode&2)!=0 && x>=128) x-=256;
-          expected+=32'(w*x);
+    for (int module_id=1;module_id<=2;module_id++) begin
+      for (int r=0;r<nk*32;r++) begin
+        for (int c=0;c<nq*8;c++) begin
+          expected=32'(nl*bias); // Cleopatra applies ADDIN once per inner tile.
+          for (int n=0;n<nl*128;n++) begin
+            w=int'(weights[r*384+n]); x=int'(inputs[n*16+c]);
+            if (module_id==2) begin
+              w=int'(weights_2[r*384+n]); x=int'(inputs_2[n*16+c]);
+            end
+            if ((sign_mode&1)!=0 && w>=128) w-=256;
+            if ((sign_mode&2)!=0 && x>=128) x-=256;
+            expected+=32'(w*x);
+          end
+          for (int b=0;b<4;b++) got[b*8 +: 8]=mem[(module_id==1 ? OBASE : OBASE_2)+4*(r*nq*8+c)+b];
+          assert (got === expected)
+            else $fatal(1,"Module %0d result [%0d,%0d] got=%h expected=%h",module_id,r,c,got,expected);
+          if (nl==3 && sign_mode==0 && bias==0)
+            assert (got===(module_id==1 ? golden[r*16+c] : golden_2[r*16+c]))
+              else $fatal(1,"Module %0d Python golden mismatch",module_id);
         end
-        for (int b=0;b<4;b++) got[b*8 +: 8]=mem[OBASE+4*(r*nq*8+c)+b];
-        assert (got === expected)
-          else $fatal(1,"Result [%0d,%0d] got=%h expected=%h",r,c,got,expected);
-        if (nl==3 && sign_mode==0 && bias==0)
-          assert (got===golden[r*16+c]) else $fatal(1,"Python golden mismatch");
       end
-    end
-    for (int b=1;b<=32;b++) begin
-      assert (mem[OBASE-b]=='ha5 && mem[OBASE+output_bytes+b-1]=='ha5)
-        else $fatal(1,"Output guard bytes overwritten");
+      for (int b=1;b<=32;b++) begin
+        assert (mem[(module_id==1 ? OBASE : OBASE_2)-b]=='ha5 &&
+                mem[(module_id==1 ? OBASE : OBASE_2)+output_bytes+b-1]=='ha5)
+          else $fatal(1,"Output guard bytes overwritten");
+      end
     end
   endtask
 
   task automatic run_job(input int nk,nl,nq, input bit add_stalls,
                          input int sign_mode=0,bias=0);
     int before_done, before_input,before_weight,before_output;
+    int before_input_2,before_weight_2,before_output_2;
     logic [31:0] status;
     fill_memory(nk,nl,nq); stalls=add_stalls;
     configure(nk,nl,nq,sign_mode,bias);
     before_done=done_count; before_input=input_count;
     before_weight=weight_count; before_output=output_count;
+    before_input_2=input_count_2; before_weight_2=weight_count_2; before_output_2=output_count_2;
     wr('h00,0); // commit and trigger
     wait(done_count==before_done+1);
     @(negedge clk);
@@ -442,19 +515,80 @@ module tb_dimc_top;
             output_count-before_output==nk*nq*32)
       else $fatal(1,"Incorrect transfer counts: input=%0d weight=%0d output=%0d",
                   input_count-before_input,weight_count-before_weight,output_count-before_output);
+    assert (input_count_2-before_input_2==nk*nl*nq*128 &&
+            weight_count_2-before_weight_2==nk*nl*nq*128 &&
+            output_count_2-before_output_2==nk*nq*32)
+      else $fatal(1,"Module 2 incorrect transfer counts");
     check_memory(nk,nl,nq,sign_mode,bias);
     access(1,'h18,0,status);
-    assert (status==0) else $fatal(1,"Unexpected completion status %h",status);
+    assert (status=='h30) else $fatal(1,"Unexpected completion status %h",status);
     $display("[DIMC_TOP] PASS K=%0d L=%0d Q=%0d stalls=%0d sign=%0d bias=%0d",
              nk,nl,nq,add_stalls,sign_mode,bias);
+  endtask
+
+  task automatic independent_stall(input int blocked, channel, input bit abort_job=0);
+    int before_done, before_transfers;
+    logic [31:0] status;
+    fill_memory(1,1,1); configure(1,1,1);
+    @(negedge clk);
+    case (channel)
+      0: hold_input[blocked]=1;
+      1: hold_weight[blocked]=1;
+      2: hold_output[blocked]=1;
+    endcase
+    before_done=done_count;
+    before_transfers=blocked==0 ? output_count : output_count_2;
+    wr(0,0);
+    wait(i_dut.dp_start);
+    wait(i_dut.i_ctrl.module_done[1-blocked]);
+    repeat (10) @(negedge clk);
+    assert (busy && done_count==before_done && i_dut.i_ctrl.module_done[1-blocked] &&
+            !i_dut.i_ctrl.module_done[blocked])
+      else $fatal(1,"Blocked module did not remain active independently");
+    assert ((blocked==0 ? output_count : output_count_2)==before_transfers)
+      else $fatal(1,"Blocked module wrote results while held");
+    access(1,'h18,0,status);
+    assert (status[0] && status[2+blocked] && !status[3-blocked] &&
+            status[5-blocked] && !status[4+blocked])
+      else $fatal(1,"Incorrect per-module status %h",status);
+    if (abort_job) begin
+      // A started output burst must drain before shared clear can occur.
+      wr('h14,0);
+      repeat (10) @(negedge clk);
+      assert (busy) else $fatal(1,"Abort cleared before blocked output drained");
+    end
+    @(negedge clk);
+    hold_input='0; hold_weight='0; hold_output='0;
+    if (abort_job) begin
+      wait(!busy);
+      repeat (8) @(negedge clk);
+      assert (done_count==before_done) else $fatal(1,"Aborted job signalled completion");
+      access(1,'h18,0,status);
+      assert (status==0) else $fatal(1,"Abort left stale module completion/status %h",status);
+      $display("[DIMC_TOP] PASS abort waits for module %0d output drain",blocked+1);
+    end else begin
+      wait(done_count==before_done+1);
+      @(negedge clk);
+      check_memory(1,1,1);
+    end
+    $display("[DIMC_TOP] PASS module %0d channel %0d stalled; other module finishes independently",
+             blocked+1,channel);
   endtask
 
   initial begin
     periph.req=0; periph.add=0; periph.wen=1; periph.data=0;
     periph.be='1; periph.id=1;
-    $readmemh("stimuli/double_buffering/double_buffering_kernel_stim.txt",weights);
-    $readmemh("stimuli/double_buffering/double_buffering_feature_stim.txt",inputs);
-    $readmemh("stimuli/double_buffering/double_buffering_golden_matmul_output.txt",golden);
+    void'($value$plusargs("STIM_DIR_1=%s",stimulus_dir_1));
+    void'($value$plusargs("STIM_DIR_2=%s",stimulus_dir_2));
+    $display("[DIMC_TOP] Module 1 matrices/golden: %s",stimulus_dir_1);
+    $display("[DIMC_TOP] Module 2 matrices/golden: %s",stimulus_dir_2);
+    // Each module loads independent, full row-major matrices and Python goldens.
+    $readmemh({stimulus_dir_1,"/double_buffering_kernel_stim.txt"},weights);
+    $readmemh({stimulus_dir_1,"/double_buffering_feature_stim.txt"},inputs);
+    $readmemh({stimulus_dir_1,"/double_buffering_golden_matmul_output.txt"},golden);
+    $readmemh({stimulus_dir_2,"/double_buffering_kernel_stim.txt"},weights_2);
+    $readmemh({stimulus_dir_2,"/double_buffering_feature_stim.txt"},inputs_2);
+    $readmemh({stimulus_dir_2,"/double_buffering_golden_matmul_output.txt"},golden_2);
     repeat (4) @(negedge clk);
     rst_n=1;
     repeat (8) @(negedge clk);
@@ -471,6 +605,12 @@ module tb_dimc_top;
     run_job(1,1,1,1);
     run_job(1,2,1,1,3,-7);
     run_job(2,1,2,1);
+    for (int blocked=0;blocked<2;blocked++)
+      for (int channel=0;channel<3;channel++) independent_stall(blocked,channel);
+    for (int blocked=0;blocked<2;blocked++) begin
+      independent_stall(blocked,2,1);
+      run_job(1,1,1,1);
+    end
     // Program the second HWPE context while the first job runs. Different
     // arithmetic configuration proves that queued writes cannot corrupt it.
     begin
@@ -495,14 +635,30 @@ module tb_dimc_top;
       logic [31:0] status;
       configure(1,1,1);
       reg_write(DIMC_REG_INPUT_ROWS,256); // mismatched inner dimension
-      before_done=done_count; before_requests=input_count+weight_count+output_count;
+      before_done=done_count; before_requests=input_count+weight_count+output_count+input_count_2+weight_count_2+output_count_2;
       wr(0,0);
       wait(done_count==before_done+1);
       access(1,'h18,0,status);
-      assert (status==2 && before_requests==input_count+weight_count+output_count)
+      assert (status==2 && before_requests==input_count+weight_count+output_count+input_count_2+weight_count_2+output_count_2)
         else $fatal(1,"Invalid command not rejected cleanly");
       $display("[DIMC_TOP] PASS invalid configuration rejection");
     end
+    for (int invalid_case=0;invalid_case<2;invalid_case++) begin
+      int before_done, before_requests;
+      logic [31:0] status;
+      configure(1,1,1);
+      if (invalid_case==0) reg_write(DIMC_REG_OUTPUT_ADDR_2,OBASE_2+1);
+      else reg_write(DIMC_REG_KERNEL_ADDR_2,32'hffffffe0);
+      before_done=done_count;
+      before_requests=input_count+weight_count+output_count+input_count_2+weight_count_2+output_count_2;
+      wr(0,0);
+      wait(done_count==before_done+1);
+      access(1,'h18,0,status);
+      assert (status==2 && before_requests==input_count+weight_count+output_count+
+              input_count_2+weight_count_2+output_count_2)
+        else $fatal(1,"Module 2 invalid addresses not rejected");
+    end
+    $display("[DIMC_TOP] PASS module 2 address alignment and overflow rejection");
     // Abort while memory reads are outstanding; old responses must be drained
     // before software sees busy=0 and starts another job.
     fill_memory(4,3,2); configure(4,3,2); wr(0,0);

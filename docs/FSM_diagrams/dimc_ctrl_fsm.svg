@@ -11,12 +11,12 @@
 <text x="675" y="378" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">datapath_start_o = 1</text>
 <rect x="1010" y="300" width="270" height="140" rx="18" fill="url(#blue)" stroke="#102d70" stroke-width="3"/>
 <text x="1145" y="345" font-family="DejaVu Sans Mono, monospace" font-size="28" text-anchor="middle" fill="#09215b" font-weight="bold">WAIT_READY</text>
-<text x="1145" y="378" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">Wait for datapath</text>
-<text x="1145" y="403" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">Start streamer on ready</text>
+<text x="1145" y="378" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">Wait for both datapaths</text>
+<text x="1145" y="403" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">Start both streamers</text>
 <rect x="1540" y="300" width="270" height="140" rx="18" fill="url(#cyan)" stroke="#102d70" stroke-width="3"/>
 <text x="1675" y="345" font-family="DejaVu Sans Mono, monospace" font-size="28" text-anchor="middle" fill="#09215b" font-weight="bold">RUN</text>
-<text x="1675" y="378" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">Wait for datapath</text>
-<text x="1675" y="403" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">and streamer completion</text>
+<text x="1675" y="378" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">Wait for both datapaths</text>
+<text x="1675" y="403" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">and both streamers done</text>
 <rect x="1540" y="650" width="270" height="140" rx="18" fill="url(#blue)" stroke="#102d70" stroke-width="3"/>
 <text x="1675" y="695" font-family="DejaVu Sans Mono, monospace" font-size="28" text-anchor="middle" fill="#09215b" font-weight="bold">FINISH</text>
 <text x="1675" y="728" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">slave_ctrl.done = 1</text>
@@ -35,13 +35,13 @@
 <path d="M810 365 H1010" fill="none" stroke="#102d70" stroke-width="3" marker-end="url(#a)"/>
 <text x="910" y="350" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="middle" fill="#09215b">unconditional</text>
 <path d="M1280 365 H1540" fill="none" stroke="#102d70" stroke-width="3" marker-end="url(#a)"/>
-<text x="1410" y="350" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="middle" fill="#09215b">datapath_ready_i</text>
+<text x="1410" y="350" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="middle" fill="#09215b">&amp;datapath_ready_i</text>
 <path d="M1675 440 V650" fill="none" stroke="#102d70" stroke-width="3" marker-end="url(#a)"/>
 <text x="1780" y="551" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="middle" fill="#09215b">job_complete</text>
 <path d="M290 300 C390 200 230 190 240 298" fill="none" stroke="#102d70" stroke-width="3" marker-end="url(#a)"/>
 <text x="230" y="205" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="middle" fill="#09215b">!slave_flags.start</text>
 <path d="M1220 300 C1320 200 1160 190 1170 298" fill="none" stroke="#102d70" stroke-width="3" marker-end="url(#a)"/>
-<text x="1160" y="205" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="middle" fill="#09215b">!datapath_ready_i</text>
+<text x="1160" y="205" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="middle" fill="#09215b">!(&amp;datapath_ready_i)</text>
 <path d="M1750 300 C1850 200 1690 190 1700 298" fill="none" stroke="#102d70" stroke-width="3" marker-end="url(#a)"/>
 <text x="1690" y="205" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="middle" fill="#09215b">!job_complete</text>
 <path d="M300 440 V520 H1475 V720 H1540" fill="none" stroke="#102d70" stroke-width="3" marker-end="url(#a)"/>
@@ -54,25 +54,25 @@
 <text x="800" y="186" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">(while rst_ni = 1)</text>
 <path d="M850 205 V585 H785 V650" fill="none" stroke="#102d70" stroke-width="3" marker-end="url(#a)"/>
 <path d="M650 720 H430" fill="none" stroke="#102d70" stroke-width="3" marker-end="url(#a)"/>
-<text x="540" y="696" font-family="DejaVu Sans Mono, monospace" font-size="16" text-anchor="middle" fill="#09215b">!streamer_flags_i.busy</text>
+<text x="540" y="696" font-family="DejaVu Sans Mono, monospace" font-size="16" text-anchor="middle" fill="#09215b">both streamers idle</text>
 <path d="M295 650 V585 H185 V440" fill="none" stroke="#102d70" stroke-width="3" marker-end="url(#a)"/>
 <text x="180" y="566" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">unconditional</text>
 <path d="M890 650 C1000 570 775 550 835 648" fill="none" stroke="#102d70" stroke-width="3" marker-end="url(#a)"/>
-<text x="1060" y="620" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">streamer_flags_i.busy</text>
+<text x="1060" y="620" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">any streamer busy</text>
 <rect x="35" y="115" width="360" height="75" rx="18" fill="url(#blue)" stroke="#102d70" stroke-width="3"/>
 <text x="215" y="145" font-family="DejaVu Sans Mono, monospace" font-size="19" text-anchor="middle" fill="#09215b">From any state: !rst_ni</text>
 <text x="215" y="173" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="middle" fill="#09215b">asynchronous reset</text>
 <path d="M105 190 V300" fill="none" stroke="#102d70" stroke-width="3" marker-end="url(#a)"/>
 <rect x="35" y="905" width="1830" height="365" rx="12" fill="#f3f7fc" stroke="#597399" stroke-width="2"/>
 <text x="55" y="940" font-family="DejaVu Sans Mono, monospace" font-size="24" text-anchor="start" fill="#09215b" font-weight="bold">Condition definitions and priorities</text>
-<text x="55" y="969" font-family="DejaVu Sans Mono, monospace" font-size="19" text-anchor="start" fill="#09215b">job_complete = (dp_done_q || datapath_done_i) &amp;&amp; (stream_done_q || streamer_flags_i.done)</text>
-<text x="55" y="998" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="start" fill="#09215b">dp_done_q / stream_done_q remember completion pulses; both clear on reset, soft_clear, or a new job.</text>
+<text x="55" y="969" font-family="DejaVu Sans Mono, monospace" font-size="19" text-anchor="start" fill="#09215b">job_complete = (&amp;(dp_done_q | datapath_done_i)) &amp;&amp; (&amp;(stream_done_q | stream_done))</text>
+<text x="55" y="998" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="start" fill="#09215b">Two-bit dp_done_q / stream_done_q remember each module; both clear on reset, soft_clear, or a new job.</text>
 <text x="55" y="1027" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="start" fill="#09215b">valid_config: nonzero / compatible dimensions; divisibility by 32, 128, 8; mode = 2&#x27;b11;</text>
-<text x="55" y="1056" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="start" fill="#09215b">              aligned input / kernel / output addresses (8 / 32 / 32 bytes); end addresses ≤ 2^32.</text>
+<text x="55" y="1056" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="start" fill="#09215b">              both sets of input / weight / output bases aligned (8 / 32 / 32 bytes); end addresses ≤ 2^32.</text>
 <text x="55" y="1085" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="start" fill="#09215b">Priority: !rst_ni → IDLE; otherwise soft_clear → ABORT; otherwise follow the state transitions.</text>
 <text x="55" y="1114" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="start" fill="#09215b">Normal arrows and state output descriptions assume rst_ni = 1 and soft_clear = 0.</text>
 <text x="55" y="1143" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="start" fill="#09215b">soft_clear immediately asserts abort_o and suppresses datapath_start_o, streamer_start_o,</text>
 <text x="55" y="1172" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="start" fill="#09215b">slave_ctrl.done, and slave_ctrl.evt. A held soft_clear keeps the FSM in ABORT.</text>
-<text x="55" y="1201" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="start" fill="#09215b">busy_o = (state_q != IDLE). streamer_start_o = (state_q == WAIT_READY) &amp;&amp; datapath_ready_i &amp;&amp; !soft_clear.</text>
+<text x="55" y="1201" font-family="DejaVu Sans Mono, monospace" font-size="17" text-anchor="start" fill="#09215b">busy_o = (state_q != IDLE). streamer_start_o = (state_q == WAIT_READY) &amp;&amp; (&amp;datapath_ready_i) &amp;&amp; !soft_clear.</text>
 <text x="55" y="1230" font-family="DejaVu Sans Mono, monospace" font-size="18" text-anchor="start" fill="#09215b">slave_ctrl.evt = (state_q == FINISH) &amp;&amp; error_q &amp;&amp; !soft_clear. Illegal state encoding → IDLE.</text>
 </svg>

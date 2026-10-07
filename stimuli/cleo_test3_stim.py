@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate tiled stimuli and golden output for Cleopatra Test 3."""
 
+import argparse
 import random
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -251,6 +252,10 @@ def calculate_matmul(
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--seed", type=int, default=45)
+    args = parser.parse_args()
+    random.seed(args.seed)
     DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     if weight_matrix_cols != input_matrix_rows:

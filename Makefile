@@ -12,6 +12,13 @@ CLEO_TEST1_STIM_DIR := $(STIM_DIR)/cleo_test1
 CLEO_TEST2_STIM_DIR := $(STIM_DIR)/cleo_test2
 CLEO_TEST3_STIM_DIR := $(STIM_DIR)/cleo_test3
 DOUBLE_BUFFERING_STIM_DIR := $(STIM_DIR)/double_buffering
+MODULE2_STIM_DIR := $(STIM_DIR)/double_buffering_module2
+# Keep the single-macro and Cleopatra 1/2 generators on the same seed: they
+# share kernel_weights.txt. Other datasets use independent reproducible seeds.
+STIM_SEED ?= 42
+DOUBLE_BUFFERING_SEED ?= $(shell expr $(STIM_SEED) + 1)
+MODULE2_SEED ?= $(shell expr $(STIM_SEED) + 2)
+CLEO_TEST3_SEED ?= $(shell expr $(STIM_SEED) + 3)
 WORK_DIR    := $(SIM_DIR)/work
 COMPILE_TCL := $(SIM_DIR)/compile.tcl
 
@@ -47,10 +54,11 @@ update-ips: $(BENDER)
 
 # ── Generate stimulus ─────────────────────────────────────────
 stim:
-	python3 $(STIM_DIR)/spatz_dimc_stim.py --outdir $(STIM_DIR)
-	python3 $(STIM_DIR)/cleo_tests_1_2_stim.py --outdir $(STIM_DIR)
-	python3 $(STIM_DIR)/cleo_test3_stim.py
-	python3 $(STIM_DIR)/double_buffering_stim.py
+	python3 $(STIM_DIR)/spatz_dimc_stim.py --seed $(STIM_SEED) --outdir $(STIM_DIR)
+	python3 $(STIM_DIR)/cleo_tests_1_2_stim.py --seed $(STIM_SEED) --outdir $(STIM_DIR)
+	python3 $(STIM_DIR)/cleo_test3_stim.py --seed $(CLEO_TEST3_SEED)
+	python3 $(STIM_DIR)/double_buffering_stim.py --seed $(DOUBLE_BUFFERING_SEED) --outdir $(DOUBLE_BUFFERING_STIM_DIR)
+	python3 $(STIM_DIR)/double_buffering_stim.py --seed $(MODULE2_SEED) --outdir $(MODULE2_STIM_DIR)
 
 # ── Compile RTL + TBs ─────────────────────────────────────────
 # Compile the locked dependencies; update-ips remains an explicit update step.
@@ -116,5 +124,6 @@ hw-clean:
 	rm -f  $(CLEO_TEST2_STIM_DIR)/*.txt
 	rm -f  $(CLEO_TEST3_STIM_DIR)/*.txt
 	rm -f  $(DOUBLE_BUFFERING_STIM_DIR)/*.txt
+	rm -f  $(MODULE2_STIM_DIR)/*.txt
 	rm -rf $(DIMC_STIM_DIR)/__pycache__
 	rm -f  etch*

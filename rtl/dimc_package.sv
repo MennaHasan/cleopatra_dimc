@@ -15,11 +15,16 @@ package dimc_package;
   localparam int DIMC_REG_BIAS = 8;
   localparam int DIMC_REG_COMPUTE_MASK = 9;
   localparam int DIMC_REG_WRITE_MASK = 10; // eight 32-bit words, low word first
-  localparam int DIMC_NB_REGS = 18;
+  // Module 1 retains the original address registers; module 2 is appended.
+  localparam int DIMC_REG_INPUT_ADDR_2 = 18;
+  localparam int DIMC_REG_KERNEL_ADDR_2 = 19;
+  localparam int DIMC_REG_OUTPUT_ADDR_2 = 20;
+  localparam int DIMC_NB_REGS = 21;
 
   // Memory holds row-major 8-bit operands and little-endian 32-bit results.
   typedef struct packed {
-    logic [31:0] input_addr, kernel_addr, output_addr;
+    logic [31:0] input_addr, kernel_addr, output_addr; // module 1
+    logic [31:0] input_addr_2, kernel_addr_2, output_addr_2; // module 2
     logic [31:0] weight_rows, weight_cols, input_rows, input_cols;
     logic [1:0] mode, sign_8b;
     logic [31:0] bias;

@@ -44,8 +44,8 @@ def matrix_tiling(
 ) -> Tuple[WeightTiles, InputTiles]:
     """Split the full matrices into DIMC-sized MxN and NxP tiles."""
     weight_tiles = {}
-    for k_index in range(K):
-        for l_index in range(L):
+    for k_index in range(len(weight_matrix) // M):
+        for l_index in range(len(weight_matrix[0]) // N_ELEMENTS):
             row_start = k_index * M
             col_start = l_index * N_ELEMENTS
             weight_tiles[k_index, l_index] = [
@@ -54,8 +54,8 @@ def matrix_tiling(
             ]
 
     input_tiles = {}
-    for l_index in range(L):
-        for q_index in range(Q):
+    for l_index in range(len(input_matrix) // N_ELEMENTS):
+        for q_index in range(len(input_matrix[0]) // P):
             row_start = l_index * N_ELEMENTS
             col_start = q_index * P
             input_tiles[l_index, q_index] = [
@@ -182,12 +182,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=43)
     parser.add_argument("--outdir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument("--k", type=int, default=K, help="Kernel row tiles (32 rows each)")
+    parser.add_argument("--l", type=int, default=L, help="Inner tiles (128 elements each)")
+    parser.add_argument("--q", type=int, default=Q, help="Input column tiles (8 columns each)")
     parser.add_argument(
         "--untile-only",
         action="store_true",
         help="Only convert the saved accumulator tiles into the final matrix",
     )
     args = parser.parse_args()
+    if min(args.k, args.l, args.q) < 1:
+        parser.error("k, l, and q must be positive")
+    if args.untile_only and (args.k, args.l, args.q) != (K, L, Q):
+        parser.error("--untile-only currently supports the default dimensions only")
 
     if args.untile_only:
         reorganize_accumulator_output(
@@ -205,13 +212,13 @@ def main() -> None:
     # Full, untiled matrices of unsigned 8-bit elements.
     kernel_stim = generate_random_matrix(
         rng,
-        WEIGHT_MATRIX_ROWS,
-        WEIGHT_MATRIX_COLS,
+        args.k * M,
+        args.l * N_ELEMENTS,
     )
     feature_stim = generate_random_matrix(
         rng,
-        INPUT_MATRIX_ROWS,
-        INPUT_MATRIX_COLS,
+        args.l * N_ELEMENTS,
+        args.q * P,
     )
 
     # software tiling done here 
@@ -236,7 +243,7 @@ def main() -> None:
     )
     write_matrix(
         args.outdir / "double_buffering_golden_matmul_output.txt",
-        calculate_golden_matmul(kernel_stim, feature_stim),
+        calculate_top_golden(kernel_stim, feature_stim, args.k, args.l, args.q, bias=BIAS),
     )
 
     # Separate compact goldens keep tb_dimc_top focused on driving/checking.
@@ -250,6 +257,8 @@ def main() -> None:
         "top_queued_second_golden.txt": (1, 2, 1, 3, -9),
     }
     for filename, settings in top_tests.items():
+        if any(needed > available for needed, available in zip(settings[:3], (args.k, args.l, args.q))):
+            continue
         write_matrix(args.outdir / filename,
                      calculate_top_golden(kernel_stim, feature_stim, *settings))
 

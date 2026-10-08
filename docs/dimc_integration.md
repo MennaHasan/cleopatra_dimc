@@ -151,9 +151,10 @@ this verifies independent progress rather than just different latencies.
 ## Numbered top-level tests
 
 Each test resets its setup and prints its number, purpose, and PASS or FAIL.
-There are no timing monitors or probes into accelerator internals. Test helpers
-only drive the peripheral bus, initialize memory, wait for public status/events,
-and compare output memory with Python golden files.
+Test helpers drive the peripheral bus, initialize memory, wait for public
+status/events, and compare output memory with Python golden files. Test 1 also
+enables the passive observer in `tb/tb_dimc_test1_timing.sv`, which reads internal
+macro activity without changing the job or its handshakes.
 
 | Test | Checks |
 |---|---|
@@ -184,5 +185,52 @@ Run all tests with `make sim-top`, or select one using `make sim-top TOP_TEST=N`
 At the simulator level, use `+TEST=N`; `+TEST=0` is the default and runs all 22.
 A failed check stops the simulation with the test number and reason. A timeout
 also names the active test. The final summary states the number of passed tests.
-The old `sim-top-timing` target and timing instrumentation have been removed.
+Test 1 writes `sim/test1_timing_kernel_<rows>x<cols>_input_<rows>x<cols>_run_<N>.txt`,
+choosing the next unused run number so previous reports remain intact. It starts
+with the measured total
+elapsed cycles and each module's input, kernel, and output matrix sizes. This
+report contains only testbench timing output, without the simulator startup
+banner. It then lists a shared cycle timeline for both modules, which is also
+printed in the simulator transcript. Cycle 0 is acceptance
+of the software start request; the total ends at the final output memory write
+grant across both modules. Events on the same edge appear under the same cycle
+heading, with separate module/macro/task labels. `OVERLAP` lines identify
+loading the next macro while the active macro computes.
+
+Each weight load, vector load, vector computation, tile-product computation,
+and output-tile write prints its start/end cycles and elapsed time. Loading
+intervals measure actual macro writes (first to 128th weight write, first to
+fourth feature write), rather than upstream memory requests or FIFO residence.
+Vector computation runs from row 0 issue to the 32nd result accumulation;
+tile-product computation ends after 256 results accumulate. Output writing runs
+from the first to the 32nd memory grant for that output tile. Elapsed time means
+`end - start`: 128 consecutive write edges span 127 cycles. Overlapping
+intervals must not be added to obtain total job time.
+
+For test 1 (`K=4, L=3, Q=2`), each module processes 24 tile-products in
+`(k,q,l)` order, with `l` changing fastest. Every three tile-products accumulate
+one complete output tile, giving eight output tiles per module. The observer
+checks that all 24 weight loads, 192 vector loads/computations, and eight output
+writes were observed before declaring timing complete.
+Run just this report with `make sim-top TOP_TEST=1`; it is also printed when
+test 1 runs in the full suite. Other tests do not enable timing observation.
+The old separate `sim-top-timing` target remains removed.
 Lower-level single-module tests remain available for the reusable datapath/core.
+
+### Test 1 with different matrix sizes
+
+The generator accepts `--k`, `--l`, and `--q` tile counts. For a 64x256 kernel
+and 256x8 input, generate independent datasets and run test 1 as follows after
+compiling (`make hw-compile`):
+
+```sh
+python3 stimuli/double_buffering_stim.py --seed 20261011 --k 2 --l 2 --q 1 --outdir stimuli/top_64x256_256x8_module1
+python3 stimuli/double_buffering_stim.py --seed 20261012 --k 2 --l 2 --q 1 --outdir stimuli/top_64x256_256x8_module2
+vsim -c -voptargs=+acc -lib sim/work tb_dimc_top +TEST=1 +MATRIX_K=2 +MATRIX_L=2 +MATRIX_Q=1 +STIM_DIR_1=stimuli/top_64x256_256x8_module1 +STIM_DIR_2=stimuli/top_64x256_256x8_module2 -do 'do scripts/run_top.tcl'
+```
+
+`MATRIX_K/L/Q` describe the source files and set test 1's job dimensions. The
+current TB storage supports K=1..4, L=1..4, Q=1..2. Other numbered tests require
+the default 4/3/2 source matrices. Reports include dimensions and the next unused
+run number, so the existing `sim/test1_timing_report.txt` and earlier runs remain
+intact.

@@ -14,6 +14,15 @@ stimuli/**/*.txt
 **/__pycache__/
 *.py[cod]
 
+# Experiment artifacts; retain only experiment results.
+/timing_analysis/experiments/**
+!/timing_analysis/experiments/**/
+!/timing_analysis/experiments/**/results.csv
+!/timing_analysis/experiments/**/results.png
+
+# Assistant-added supporting documentation, not requested project deliverables.
+/timing_analysis/EXPERIMENTS.md
+
 # Always track repository documentation
 !docs/
 !docs/**

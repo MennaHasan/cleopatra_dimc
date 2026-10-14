@@ -37,11 +37,30 @@ STEPS:
 
 make sim-top STIM_SEED=20261007
 
+**python3 timing_analysis/timing_analysis.py timing_analysis/timing_report_1.txt**
+
+python3 timing_analysis/timing_analysis.py timing_analysis/timing_report_1.txt --start 150 --end 250
+
+
+
+to run experiement
+
+```
+python3 timing_analysis/run_experiments.py
+```
+
+to Preview the selected sizes without running simulations:
+
+```
+python3 timing_analysis/run_experiments.py --dry-run
+```
+
+
 1. To use GUI
    make sim-single GUI=1
    make sim-dual GUI=1
    make sim-cleopatra GUI=1
-8. Adding signals innside Questasim
+2. Adding signals innside Questasim
    A. for sim-dual
    restart -f
    env tb_dimc_dual

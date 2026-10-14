@@ -13,6 +13,10 @@ CLEO_TEST2_STIM_DIR := $(STIM_DIR)/cleo_test2
 CLEO_TEST3_STIM_DIR := $(STIM_DIR)/cleo_test3
 DOUBLE_BUFFERING_STIM_DIR := $(STIM_DIR)/double_buffering
 MODULE2_STIM_DIR := $(STIM_DIR)/double_buffering_module2
+# Command-line matrix dimensions for Test 1, e.g. make sim-top TOP_TEST=1 K=2 L=3 Q=4
+K ?= 6
+L ?= 7
+Q ?= 5
 # Keep the single-macro and Cleopatra 1/2 generators on the same seed: they
 # share kernel_weights.txt. Other datasets use independent reproducible seeds.
 STIM_SEED ?= 42
@@ -27,7 +31,7 @@ BENDER_VERSION := 0.31.0
 BENDER         := $(SIM_DIR)/bender
 
 # ── Default target ────────────────────────────────────────────
-.PHONY: hw-all stim update-ips hw-compile sim-dual sim-double-buffering sim-single sim-datapath sim-top sim-cleopatra hw-clean
+.PHONY: hw-all stim stim-top update-ips hw-compile sim-dual sim-double-buffering sim-single sim-datapath sim-top sim-cleopatra hw-clean
 
 hw-all: stim hw-compile
 
@@ -61,6 +65,10 @@ stim:
 	python3 $(STIM_DIR)/double_buffering_stim.py --seed $(MODULE2_SEED) --outdir $(MODULE2_STIM_DIR)
 
 # ── Compile RTL + TBs ─────────────────────────────────────────
+stim-top:
+	python3 $(STIM_DIR)/double_buffering_stim.py --k $(K) --l $(L) --q $(Q) --seed $(DOUBLE_BUFFERING_SEED) --outdir $(DOUBLE_BUFFERING_STIM_DIR)
+	python3 $(STIM_DIR)/double_buffering_stim.py --k $(K) --l $(L) --q $(Q) --seed $(MODULE2_SEED) --outdir $(MODULE2_STIM_DIR)
+
 # Compile the locked dependencies; update-ips remains an explicit update step.
 hw-compile: $(BENDER)
 	mkdir -p $(SIM_DIR)
@@ -103,8 +111,8 @@ sim-single: stim hw-compile
 sim-datapath: stim hw-compile
 	vsim $(VSIM_FLAGS) -l $(SIM_DIR)/transcript -lib $(WORK_DIR) tb_dimc_datapath -do $(VSIM_DO)
 
-sim-top: stim hw-compile
-	vsim $(VSIM_TOP_FLAGS) -l $(SIM_DIR)/transcript -lib $(WORK_DIR) tb_dimc_top +TEST=$(TOP_TEST) -do $(VSIM_TOP_DO)
+sim-top: stim-top hw-compile
+	vsim $(VSIM_TOP_FLAGS) -l $(SIM_DIR)/transcript -lib $(WORK_DIR) tb_dimc_top +TEST=$(TOP_TEST) +MATRIX_K=$(K) +MATRIX_L=$(L) +MATRIX_Q=$(Q) -do $(VSIM_TOP_DO)
 
 sim-cleopatra: stim hw-compile
 	rm -f $(CLEO_TEST3_STIM_DIR)/test3_accumulator_output.txt

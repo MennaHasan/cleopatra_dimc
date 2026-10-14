@@ -2,7 +2,8 @@
 // This drives memory responses; it does not monitor accelerator internals.
 `timescale 1ns/1ps
 package tb_dimc_memory;
-  byte unsigned mem [0:262143];
+  // Sparse byte memory grows as matrices are written; no fixed capacity.
+  byte unsigned mem [int unsigned];
 endpackage
 
 // Simulation-only shared memory port. Requests can queue, grants can stall,

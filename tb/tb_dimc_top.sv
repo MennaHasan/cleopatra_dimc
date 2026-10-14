@@ -22,8 +22,8 @@ module tb_dimc_top;
     .periph, .input_tcdm(input_mem), .kernel_tcdm(weight_mem), .output_tcdm(output_mem),
     .input_tcdm_2(input_mem_2), .kernel_tcdm_2(weight_mem_2), .output_tcdm_2(output_mem_2)
   );
-  localparam int WBASE='h1000, IBASE='h11000, OBASE='h14000;
-  localparam int WBASE_2='h18000, IBASE_2='h28000, OBASE_2='h2b000;
+  // Assigned after reading matrix dimensions; leave aligned guard space.
+  int unsigned WBASE, IBASE, OBASE, WBASE_2, IBASE_2, OBASE_2;
   logic [31:0] weight_bytes, input_bytes, output_bytes;
   int response_delay=2;
   int input_count, weight_count, output_count;
@@ -52,21 +52,23 @@ module tb_dimc_top;
     .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .response_delay_i(response_delay), .hold_i(hold_output[1]), .port(output_mem_2),
     .region_base_i(32'(OBASE_2)), .region_bytes_i(output_bytes), .transfers_o(output_count_2)
   );
-  logic [7:0] weights [0:65535], inputs [0:8191];
-  logic [31:0] golden [0:2047];
-  logic [7:0] weights_2 [0:65535], inputs_2 [0:8191];
-  logic [31:0] golden_2 [0:2047];
+  logic [7:0] weights[], inputs[];
+  logic [31:0] golden[];
+  logic [7:0] weights_2[], inputs_2[];
+  logic [31:0] golden_2[];
   string stimulus_dir_1="stimuli/double_buffering";
   string stimulus_dir_2="stimuli/double_buffering_module2";
   logic [31:0] status;
   int selected_test=0, test_number=0, passed=0;
-  int matrix_k=4, matrix_l=3, matrix_q=2; // Source file tile counts; test 1 uses the full matrices.
+  int matrix_k=6, matrix_l=7, matrix_q=5; // Source file tile counts; test 1 uses the full matrices.
   bit tests_passed=0;
+  longint unsigned watchdog_cycles=500000;
   string test_name="initialization";
 
   // Test 1 alone uses this passive observer; both modules share its cycle 0.
   logic test1_timing_done;
-  logic [1:0] timing_weight_load, timing_load_macro, timing_active_macro, timing_result_pop;
+  logic [1:0] timing_weight_load, timing_load_macro, timing_active_macro, timing_result_push;
+  logic [1:0] timing_input_push;
   logic [1:0][7:0] timing_weight_section;
   logic [1:0][31:0] timing_compute_tile;
   logic [1:0][2:0] timing_compute_vector;
@@ -74,9 +76,10 @@ module tb_dimc_top;
   logic [1:0][1:0][1:0] timing_feature_section;
   logic [1:0][1:0][6:0] timing_compute_row;
   assign timing_weight_load[0] = i_dut.i_module_1.i_datapath.weight_load;
+  assign timing_input_push[0] = i_dut.i_module_1.i_datapath.inp_push;
   assign timing_load_macro[0] = i_dut.i_module_1.i_datapath.load_macro;
   assign timing_active_macro[0] = i_dut.i_module_1.i_datapath.active_q;
-  assign timing_result_pop[0] = i_dut.i_module_1.i_datapath.result_pop;
+  assign timing_result_push[0] = i_dut.i_module_1.i_datapath.i_cleopatra.u_dimc_dual.out_push;
   assign timing_weight_section[0] = i_dut.i_module_1.i_datapath.weights_loaded_q;
   assign timing_compute_tile[0] = ((i_dut.i_module_1.i_datapath.k_q*i_dut.i_module_1.i_datapath.q_size_q+i_dut.i_module_1.i_datapath.q_q)*i_dut.i_module_1.i_datapath.l_size_q+i_dut.i_module_1.i_datapath.l_q+1);
   assign timing_compute_vector[0] = i_dut.i_module_1.i_datapath.vector_q;
@@ -85,9 +88,10 @@ module tb_dimc_top;
   assign timing_feature_section[0] = i_dut.i_module_1.i_datapath.fa;
   assign timing_compute_row[0] = i_dut.i_module_1.i_datapath.ra;
   assign timing_weight_load[1] = i_dut.i_module_2.i_datapath.weight_load;
+  assign timing_input_push[1] = i_dut.i_module_2.i_datapath.inp_push;
   assign timing_load_macro[1] = i_dut.i_module_2.i_datapath.load_macro;
   assign timing_active_macro[1] = i_dut.i_module_2.i_datapath.active_q;
-  assign timing_result_pop[1] = i_dut.i_module_2.i_datapath.result_pop;
+  assign timing_result_push[1] = i_dut.i_module_2.i_datapath.i_cleopatra.u_dimc_dual.out_push;
   assign timing_weight_section[1] = i_dut.i_module_2.i_datapath.weights_loaded_q;
   assign timing_compute_tile[1] = ((i_dut.i_module_2.i_datapath.k_q*i_dut.i_module_2.i_datapath.q_size_q+i_dut.i_module_2.i_datapath.q_q)*i_dut.i_module_2.i_datapath.l_size_q+i_dut.i_module_2.i_datapath.l_q+1);
   assign timing_compute_vector[1] = i_dut.i_module_2.i_datapath.vector_q;
@@ -100,7 +104,8 @@ module tb_dimc_top;
     .start_request_i(periph.req && periph.gnt && !periph.wen && periph.add==0),
     .config_i(i_dut.config_), .weight_load_i(timing_weight_load),
     .load_macro_i(timing_load_macro), .active_macro_i(timing_active_macro),
-    .result_pop_i(timing_result_pop), .weight_section_i(timing_weight_section),
+    .result_push_i(timing_result_push), .weight_section_i(timing_weight_section),
+    .input_push_i(timing_input_push),
     .compute_tile_i(timing_compute_tile), .compute_vector_i(timing_compute_vector),
     .feature_load_i(timing_feature_load), .compute_issue_i(timing_compute_issue),
     .feature_section_i(timing_feature_section), .compute_row_i(timing_compute_row),
@@ -612,6 +617,7 @@ module tb_dimc_top;
   endtask
 
   initial begin
+    longint unsigned source_weights, source_inputs, source_outputs, next_base;
     periph.req=0; periph.add=0; periph.wen=1; periph.data=0;
     periph.be='1; periph.id=1;
     void'($value$plusargs("TEST=%d",selected_test));
@@ -619,8 +625,38 @@ module tb_dimc_top;
     void'($value$plusargs("MATRIX_K=%d",matrix_k));
     void'($value$plusargs("MATRIX_L=%d",matrix_l));
     void'($value$plusargs("MATRIX_Q=%d",matrix_q));
-    check_condition(matrix_k>=1 && matrix_k<=4 && matrix_l>=1 && matrix_l<=4 &&
-                    matrix_q>=1 && matrix_q<=2,"Source matrices exceed supported TB storage (K=1..4, L=1..4, Q=1..2)");
+    check_condition(matrix_k>=1 && matrix_l>=1 && matrix_q>=1,
+                    "MATRIX_K, MATRIX_L and MATRIX_Q must be positive");
+    // Check in wide arithmetic before allocation or 32-bit address conversion.
+    source_weights=64'(matrix_k)*32*64'(matrix_l)*128;
+    source_inputs=64'(matrix_l)*128*64'(matrix_q)*8;
+    source_outputs=64'(matrix_k)*32*64'(matrix_q)*8;
+    check_condition(source_weights<=64'h7fffffff && source_inputs<=64'h7fffffff &&
+                    source_outputs<=64'h1fffffff,
+                    "Matrices exceed supported array indexing or byte-count range");
+    weights=new[int'(source_weights)]; weights_2=new[int'(source_weights)];
+    inputs=new[int'(source_inputs)]; inputs_2=new[int'(source_inputs)];
+    golden=new[int'(source_outputs)]; golden_2=new[int'(source_outputs)];
+    next_base='h1000;
+    WBASE=32'(next_base);
+    next_base=(next_base+source_weights+63)&~64'd31;
+    check_condition(next_base<64'h100000000,"Weight region exceeds 32-bit address space");
+    IBASE=32'(next_base);
+    next_base=(next_base+source_inputs+63)&~64'd31;
+    check_condition(next_base<64'h100000000,"Input region exceeds 32-bit address space");
+    OBASE=32'(next_base);
+    next_base=(next_base+source_outputs*4+63)&~64'd31;
+    check_condition(next_base<64'h100000000,"Output region exceeds 32-bit address space");
+    WBASE_2=32'(next_base);
+    next_base=(next_base+source_weights+63)&~64'd31;
+    check_condition(next_base<64'h100000000,"Module 2 weight region exceeds 32-bit address space");
+    IBASE_2=32'(next_base);
+    next_base=(next_base+source_inputs+63)&~64'd31;
+    check_condition(next_base<64'h100000000,"Module 2 input region exceeds 32-bit address space");
+    OBASE_2=32'(next_base);
+    next_base=next_base+source_outputs*4+32;
+    check_condition(next_base<=64'h100000000,"Matrices exceed 32-bit memory address space");
+    watchdog_cycles=500000+64'(matrix_k)*64'(matrix_l)*64'(matrix_q)*1000;
     check_condition(selected_test==1 || (matrix_k==4 && matrix_l==3 && matrix_q==2),
                     "Custom matrix dimensions require TEST=1; other tests use the default source sizes");
     void'($value$plusargs("STIM_DIR_1=%s",stimulus_dir_1));
@@ -660,7 +696,8 @@ module tb_dimc_top;
   end
 
   initial begin
-    #5ms;
+    #1ns; // Dimension-dependent budget is assigned during initialization.
+    #(watchdog_cycles*10ns);
     $fatal(1,"[DIMC_TOP] Test %0d (%s): FAIL - timeout",test_number,test_name);
   end
 endmodule

@@ -4,6 +4,9 @@ transcript
 vsim.wlf
 etch*
 
+# Local scripts
+/scripts/
+
 # Generated simulation artefacts (bender binary, compiled libs, waveforms)
 sim/
 

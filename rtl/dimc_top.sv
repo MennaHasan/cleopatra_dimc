@@ -1,5 +1,5 @@
 /* Two complete independent DIMC modules controlled as one software job.
- * Six HCI ports: input=64, weight=256, output=256 bits per module.
+ * One shared 256-bit HCI port per module.
  * Configuration/start/abort/clear are broadcast; all data handshakes are local.
  */
 module dimc_top
@@ -10,7 +10,7 @@ module dimc_top
   parameter int unsigned N_CORES = 2,
   parameter int unsigned N_CONTEXT = 2,
   parameter int unsigned ID = 10,
-  parameter hci_size_parameter_t INPUT_SIZE = '{DW:64, AW:32, BW:8, UW:1, IW:1, EW:0, EHW:0},
+  parameter hci_size_parameter_t INPUT_SIZE = '{DW:256, AW:32, BW:8, UW:1, IW:1, EW:0, EHW:0},
   parameter hci_size_parameter_t KERNEL_SIZE = '{DW:256, AW:32, BW:8, UW:1, IW:1, EW:0, EHW:0},
   parameter hci_size_parameter_t OUTPUT_SIZE = '{DW:256, AW:32, BW:8, UW:1, IW:1, EW:0, EHW:0}
 )(
@@ -18,12 +18,8 @@ module dimc_top
   output logic busy_o,
   output logic [N_CORES-1:0][REGFILE_N_EVT-1:0] evt_o,
   hwpe_ctrl_intf_periph.slave periph,
-  hci_core_intf.initiator input_tcdm,
-  hci_core_intf.initiator kernel_tcdm,
-  hci_core_intf.initiator output_tcdm,
-  hci_core_intf.initiator input_tcdm_2,
-  hci_core_intf.initiator kernel_tcdm_2,
-  hci_core_intf.initiator output_tcdm_2
+  hci_core_intf.initiator tcdm,
+  hci_core_intf.initiator tcdm_2
 );
   dimc_config_t config_;
   dimc_streamer_flags_t [1:0] streamer_flags;
@@ -43,7 +39,7 @@ module dimc_top
     .datapath_start_i(dp_start), .streamer_start_i(stream_start), .config_i(config_),
     .datapath_ready_o(dp_ready[0]), .datapath_done_o(dp_done[0]),
     .streamer_flags_o(streamer_flags[0]),
-    .input_tcdm(input_tcdm), .kernel_tcdm(kernel_tcdm), .output_tcdm(output_tcdm)
+    .tcdm(tcdm)
   );
   dimc_module #(
     .MODULE_ID(2), .INPUT_SIZE(INPUT_SIZE), .KERNEL_SIZE(KERNEL_SIZE), .OUTPUT_SIZE(OUTPUT_SIZE)
@@ -52,12 +48,12 @@ module dimc_top
     .datapath_start_i(dp_start), .streamer_start_i(stream_start), .config_i(config_),
     .datapath_ready_o(dp_ready[1]), .datapath_done_o(dp_done[1]),
     .streamer_flags_o(streamer_flags[1]),
-    .input_tcdm(input_tcdm_2), .kernel_tcdm(kernel_tcdm_2), .output_tcdm(output_tcdm_2)
+    .tcdm(tcdm_2)
   );
   // synthesis translate_off
   initial begin
-    assert (INPUT_SIZE.DW == 64 && KERNEL_SIZE.DW == 256 && OUTPUT_SIZE.DW == 256)
-      else $fatal(1, "DIMC memory widths must be input=64, weight=256, output=256");
+    assert (INPUT_SIZE.DW == 256 && KERNEL_SIZE.DW == 256 && OUTPUT_SIZE.DW == 256)
+      else $fatal(1, "DIMC memory widths must be input=256, weight=256, output=256");
   end
   // synthesis translate_on
 endmodule

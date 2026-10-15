@@ -1,8 +1,8 @@
 """Run independent Test 1 experiments and collect per-module MACs and cycles.
 
-Default: 25 distinct mixed combinations, with each of K, L, Q between 5 and 20.
-Combinations where K=L=Q are excluded from the sampled sweep.
-A final baseline run uses K=L=Q=1, making 26 experiments by default.
+Default: 89 experiments: all 64 combinations of K, L, Q from 1 to 4,
+and 25 distinct random mixed combinations from 5 to 30.
+K=L=Q=1 appears once. Equal triples are excluded only from the random sweep.
 Use --k K --l L --q Q for a single custom experiment.
 Dimensions are passed at runtime; source defaults are never rewritten.
 """
@@ -82,9 +82,9 @@ def plot_results(csv_path, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--first", type=int, default=5, help="Minimum value for each of K, L, Q")
-    parser.add_argument("--last", type=int, default=20, help="Maximum value for each of K, L, Q")
-    parser.add_argument("--count", type=int, default=25, help="Number of distinct mixed combinations")
+    parser.add_argument("--first", type=int, default=5, help="Minimum K, L, Q for the random sweep")
+    parser.add_argument("--last", type=int, default=30, help="Maximum K, L, Q for the random sweep")
+    parser.add_argument("--count", type=int, default=25, help="Random mixed combinations, in addition to the 64 small runs")
     for dimension in ("k", "l", "q"):
         parser.add_argument("--" + dimension, type=int, help="Single-run tile count; supply all three")
     parser.add_argument("--seed", type=int, help="Reproduce the experiment seed sequence; otherwise random")
@@ -118,12 +118,16 @@ def main():
                       if not k == l == q]
         if not 1 <= args.count <= len(candidates):
             parser.error("--count must be between 1 and {} for this mixed-combination range".format(len(candidates)))
-        sizes = rng.sample(candidates, args.count)
-        sizes.sort(key=lambda size: (size[0] * size[1] * size[2], size))
-        sizes.append((1, 1, 1))
+        random_sizes = rng.sample(candidates, args.count)
+        random_sizes.sort(key=lambda size: (size[0] * size[1] * size[2], size))
+        sizes = [(k, l, q)
+                 for k in range(1, 5)
+                 for l in range(1, 5)
+                 for q in range(1, 5)]
+        sizes.extend(random_sizes)
     used_seeds = set()
     plan = []
-    for size in sizes:
+    for index, size in enumerate(sizes, 1):
         seeds = []
         while len(seeds) < 2:
             seed = rng.randrange(1, 2**31)
@@ -131,7 +135,8 @@ def main():
                 used_seeds.add(seed)
                 seeds.append(seed)
         plan.append((size, seeds))
-        print("K={}, L={}, Q={}; module seeds {} / {}".format(*size, *seeds))
+        print("Experiment {}/{}: K={}, L={}, Q={}; module seeds {} / {}".format(
+            index, len(sizes), *size, *seeds))
     if args.dry_run:
         return
     for tool in ("vsim",) if args.skip_compile else ("make", "vsim", "vlib"):
@@ -148,9 +153,15 @@ def main():
         destination.flush()
         if not args.skip_compile:
             execute(["make", "hw-compile"], output / "compile.log")
+        directory_counts = {}
         try:
             for (k, l, q), seeds in plan:
-                experiment = output / "k{}_l{}_q{}".format(k, l, q)
+                name = "k{}_l{}_q{}".format(k, l, q)
+                directory_counts[name] = directory_counts.get(name, 0) + 1
+                occurrence = directory_counts[name]
+                if occurrence > 1:
+                    name += "_repeat{}".format(occurrence)
+                experiment = output / name
                 experiment.mkdir()
                 for module, seed in enumerate(seeds, 1):
                     stim = experiment / "module_{}".format(module)

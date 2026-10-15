@@ -14,9 +14,9 @@ CLEO_TEST3_STIM_DIR := $(STIM_DIR)/cleo_test3
 DOUBLE_BUFFERING_STIM_DIR := $(STIM_DIR)/double_buffering
 MODULE2_STIM_DIR := $(STIM_DIR)/double_buffering_module2
 # Command-line matrix dimensions for Test 1, e.g. make sim-top TOP_TEST=1 K=2 L=3 Q=4
-K ?= 6
-L ?= 7
-Q ?= 5
+K ?= 4
+L ?= 3
+Q ?= 2
 # Keep the single-macro and Cleopatra 1/2 generators on the same seed: they
 # share kernel_weights.txt. Other datasets use independent reproducible seeds.
 STIM_SEED ?= 42

@@ -15,6 +15,7 @@ sources:
       - rtl/spatz_dimc_dual.sv
       - rtl/dimc_package.sv
       - rtl/dimc_datapath.sv
+      - rtl/dimc_hci_mux.sv
       - rtl/dimc_streamer.sv
       - rtl/dimc_ctrl.sv
       - rtl/dimc_module.sv
@@ -29,7 +30,6 @@ sources:
       - tb/tb_double_buffering.sv
       - tb/tb_spatz_dimc.sv
       - tb/tb_dimc_datapath.sv
-      - tb/tb_dimc_memory.sv
       - tb/tb_dimc_test1_timing.sv
       - tb/tb_dimc_top.sv
       - tb/tb_cleopatra.sv

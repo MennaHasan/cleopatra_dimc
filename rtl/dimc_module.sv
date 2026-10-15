@@ -1,5 +1,5 @@
 /* One complete module: two macros, 256 accumulators, three FIFOs and
- * dedicated input/weight/output streamers. Instances advance independently.
+ * input/weight/output streamers sharing one memory port. Instances advance independently.
  * MODULE_ID=1 maps local m0/m1 to macros 1/2; MODULE_ID=2 maps them to 3/4.
  */
 module dimc_module
@@ -7,7 +7,7 @@ module dimc_module
   import hci_package::*;
 #(
   parameter int MODULE_ID = 1,
-  parameter hci_size_parameter_t INPUT_SIZE = '{DW:64, AW:32, BW:8, UW:1, IW:1, EW:0, EHW:0},
+  parameter hci_size_parameter_t INPUT_SIZE = '{DW:256, AW:32, BW:8, UW:1, IW:1, EW:0, EHW:0},
   parameter hci_size_parameter_t KERNEL_SIZE = '{DW:256, AW:32, BW:8, UW:1, IW:1, EW:0, EHW:0},
   parameter hci_size_parameter_t OUTPUT_SIZE = '{DW:256, AW:32, BW:8, UW:1, IW:1, EW:0, EHW:0}
 )(
@@ -15,10 +15,15 @@ module dimc_module
   input wire dimc_config_t config_i,
   output logic datapath_ready_o, datapath_done_o,
   output dimc_streamer_flags_t streamer_flags_o,
-  hci_core_intf.initiator input_tcdm,
-  hci_core_intf.initiator kernel_tcdm,
-  hci_core_intf.initiator output_tcdm
+  hci_core_intf.initiator tcdm
 );
+  hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) input_tcdm (.clk(clk_i));
+  hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) kernel_tcdm (.clk(clk_i));
+  hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) output_tcdm (.clk(clk_i));
+  dimc_hci_mux i_memory_mux (
+    .clk_i, .rst_ni, .input_port(input_tcdm), .weight_port(kernel_tcdm),
+    .output_port(output_tcdm), .memory(tcdm)
+  );
   dimc_config_t config_;
   // Both modules receive the identical bundle; select only local addresses.
   always_comb begin

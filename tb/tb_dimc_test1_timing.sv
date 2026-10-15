@@ -35,6 +35,13 @@ module tb_dimc_test1_timing
   end
   longint unsigned total_macs;
   int precision_bits;
+  int minimum_macs=0;
+  bit quiet_timing=0, summary_timing=0;
+  initial begin
+    void'($value$plusargs("MIN_MACS_PER_CYCLE=%d",minimum_macs));
+    summary_timing=$test$plusargs("SUMMARY_TIMING");
+    quiet_timing=$test$plusargs("QUIET_TIMING") || summary_timing;
+  end
 
   // Append all events first, then print one shared heading for this edge.
   task automatic event_line(input string line_);
@@ -60,10 +67,10 @@ module tb_dimc_test1_timing
       if (running) begin
         for (int m=0;m<2;m++) begin
           // The input FIFO is shared by the module's macros. Each accepted
-          // four-beat vector is destined for the current loading macro.
+          // four-beat vector is destined for the active tile macro.
           if (input_push_i[m]) begin
-            macro_id=2*m+int'(load_macro_i[m])+1;
             tile_id=fifo_input_beats[m]/32+1;
+            macro_id=2*m+((tile_id-1)%2)+1;
             vector_id=(fifo_input_beats[m]%32)/4+1;
             if (fifo_input_beats[m]%4==0) begin
               fifo_vector_start[m]=cycle;
@@ -171,10 +178,13 @@ module tb_dimc_test1_timing
       end
       if (events!="") begin
         cycle_report=$sformatf("[TEST1 TIMING] CYCLE %0d\n%s",cycle,events);
-        $display("%s",cycle_report);
-        timeline={timeline,cycle_report,"\n"};
+        if (!quiet_timing) $display("%s",cycle_report);
+        if (!summary_timing) timeline={timeline,cycle_report,"\n"};
         // Write after completion so the measured total appears before the timeline.
         if (done_o) begin
+          total_macs=64'(config_i.weight_rows)*64'(config_i.weight_cols)*64'(config_i.input_cols);
+          assert (minimum_macs==0 || total_macs>=64'(minimum_macs)*cycle)
+            else $fatal(1,"Throughput regression: %0f MACs/cycle, required %0d",real'(total_macs)/cycle,minimum_macs);
           // Choose a free report number to preserve past reports and analyses.
           report_run=0;
           do begin
@@ -189,6 +199,7 @@ module tb_dimc_test1_timing
           end while (report_first_char!=-1);
           void'($fseek(report_file,0,0));
           $fdisplay(report_file,"TEST 1 TIMING REPORT");
+          if (summary_timing) $fdisplay(report_file,"Summary only; cycle timeline disabled for this run.");
           $fdisplay(report_file,"Total elapsed cycles: %0d (start-request acceptance to both modules' final output writes)",cycle);
           precision_bits=1 << config_i.mode;
           $fdisplay(report_file,"Precision used: %0d bits",precision_bits);

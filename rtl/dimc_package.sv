@@ -21,7 +21,8 @@ package dimc_package;
   localparam int DIMC_REG_OUTPUT_ADDR_2 = 20;
   localparam int DIMC_NB_REGS = 21;
 
-  // Memory holds row-major 8-bit operands and little-endian 32-bit results.
+  // Memory holds packed 8-bit input vectors ([q][l] tiles), row-major
+  // 8-bit weights, and row-major little-endian 32-bit results.
   typedef struct packed {
     logic [31:0] input_addr, kernel_addr, output_addr; // module 1
     logic [31:0] input_addr_2, kernel_addr_2, output_addr_2; // module 2

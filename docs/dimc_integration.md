@@ -37,29 +37,77 @@ clear. An aborted job does not generate a successful completion event.
 
 ## Memory ports
 
-All addresses are 32-bit byte addresses. Each module has three independent
-HCI initiator ports; the top level does not arbitrate them.
+All addresses are 32-bit byte addresses. Each inner block (`dimc_module`)
+exports one 256-bit HCI initiator: `tcdm` for module 1 and `tcdm_2` for module 2.
+These replace the previous six top-level ports. Input reads, weight reads,
+and output writes arbitrate dynamically inside each module.
 
-| Module | Input reads (64 bits) | Weight reads (256 bits) | Result writes (256 bits) |
-|---|---|---|---|
-| 1 | `input_tcdm` | `kernel_tcdm` | `output_tcdm` |
-| 2 | `input_tcdm_2` | `kernel_tcdm_2` | `output_tcdm_2` |
+The arbiter uses round-robin priority among eligible requests and locks the
+selected request until granted. One active-read owner bit routes responses
+to the weight or input source; an outstanding-read counter allows up to 32
+reads in flight. All reads from a source drain before switching sources.
+Writes can still use the port while reads are outstanding. Responses must
+be returned in order and held until `r_ready`. Writes complete at the request
+grant and do not produce responses. Soft clear drains traffic before resetting
+the streamers; the arbiter retains ownership until each response is consumed.
 
-Connect all six ports in the integrating system. Each can have independent
-request grants and read-response latency. They may connect to a shared
-memory address space or to separate memories. In a shared memory space,
-software must allocate output regions so that unintended overwrites cannot
-occur. Input or weight regions may intentionally be shared.
+The two ports may connect to one shared memory address space or separate
+memories. Software must allocate nonoverlapping output regions. Input and
+weight regions may intentionally be shared.
 
-Memory contains row-major 8-bit operands and little-endian 32-bit results.
-For each module, weights have shape `(K*32, L*128)`, inputs `(L*128, Q*8)`,
-and results `(K*32, Q*8)`. Both modules use the same positive `K`, `L`, `Q`.
-The streamer performs tiling and input transposition in hardware.
+Memory contains row-major 8-bit weights, packed 8-bit input vectors, and
+row-major little-endian 32-bit results. The logical matrix shapes are weights
+`(K*32, L*128)`, inputs `(L*128, Q*8)`, and results `(K*32, Q*8)`. Both modules
+use the same positive `K`, `L`, `Q`. Inputs must be packed before the job starts.
 
 Input bases must be 8-byte aligned; weight and output bases must be 32-byte
 aligned. The controller validates alignment and 32-bit end-address bounds
 for both address triplets before either module starts. Current supported
 mode is `2'b11` (8-bit operation).
+
+## Input packing and FIFO scheduling
+
+Inputs use the order already produced by `double_buffering_tiled_inputs.txt`:
+input tiles are stored in `[q][l]` order, with `l` advancing fastest. Each tile
+contains vectors 0 through 7, each with 128 consecutive eight-bit elements.
+One tile occupies **1,024 bytes**, or **32 consecutive 256-bit beats**.
+
+For local vector `c` (0..7) and element `r` (0..127), its byte address is:
+
+```text
+input_addr + (q * L + l) * 1024 + c * 128 + r
+```
+
+The same input tiles are reread for each weight-row group `k`. The existing
+`hci_core_source` reads each tile directly into the **8 x 256-bit input FIFO**.
+Fixed byte-order wiring maps the little-endian memory lanes to the macro's
+MSB-first section order. There is no custom input-reader module, transpose
+buffer, or full input-tile storage in the streamer.
+
+For each tile product, the streamer completes its 128-beat weight transfer
+before starting its 32-beat input transfer. The next tile's weight transfer
+waits until the preceding input transfer has drained into the datapath.
+This prevents a response stalled by the small input FIFO from blocking weight
+responses needed for computation on the shared, ordered response channel.
+The existing arbiter still routes responses according to their request source;
+no input-credit counter or extra response buffer is added. Output writes may
+still arbitrate for the shared port while reads are active.
+One read-phase FSM and one shared `(k,l,q)` index set sequence both transfers,
+advancing to the next tile only when its input transfer finishes.
+
+Each block retains a weight FIFO of 128 x 256 bits and one shared macro-result
+FIFO of **32 x 32 bits**. `LOAD_FIRST` consumes vector 0 immediately; it never
+waits for a full 32-section tile to fit in the input FIFO. Later vectors stream
+during `RUN`. Once vector 7 is in the active macro, the FIFO head belongs to
+the next tile and its first vector can load into the inactive macro. Separate
+current/next input counters preserve ordering across the macro switch.
+
+The result FIFO accepts at most one scalar per cycle and drains one scalar
+per cycle whenever nonempty. Starting empty, occupancy is at most one:
+an initial push fills one entry, and every later push is matched by a pop.
+External output stalls hold the completed tile in the accumulators rather
+than blocking this drain. A simulation assertion fails if the FIFO reaches
+capacity, so a dropped pipeline result cannot pass silently.
 
 ## Configuration register map
 
@@ -84,6 +132,16 @@ Values below are pointers to matrix memory, not peripheral-register addresses.
 | `0x68` | 18 | `input_addr_2` | Module 2 |
 | `0x6c` | 19 | `kernel_addr_2` | Module 2 |
 | `0x70` | 20 | `output_addr_2` | Module 2 |
+
+`N_CONTEXT` defaults to **2**. The active job and one queued job retain
+separate configuration. A third acquire fails until a context is released.
+Soft clear discards all queued jobs after draining the active traffic.
+
+`dimc_ctrl` uses the original `hwpe_ctrl_slave` and `hwpe_ctrl_regfile` from
+the locked hwpe-ctrl dependency, without local copies or changes. STATUS
+(`0x0c`) retains one byte per context: context `i` occupies bits `[8*i +: 8]`,
+with value 1 when occupied and 0 when free. The two contexts use the low
+two bytes of the original 32-bit status register.
 
 The HWPE extension status register at `0x18` exposes:
 
@@ -116,17 +174,22 @@ before reusing memory or launching a replacement job after an abort.
 
 ```bash
 module load bender/0.31.0 questasim/2024.3
-make sim-top
+make sim-top                  # all 25 tests, default K=4 L=3 Q=2
 make sim-top TOP_TEST=1
 ```
 
 The top-level TB loads each module's input matrices, weight matrices, and Python
 golden results directly from files. Module 1 reads `stimuli/double_buffering/`;
 module 2 reads `stimuli/double_buffering_module2/`. Both directories contain
-`double_buffering_kernel_stim.txt`, `double_buffering_feature_stim.txt`, and
+`double_buffering_kernel_stim.txt`, `double_buffering_tiled_inputs.txt`, and
 `double_buffering_golden_matmul_output.txt`. The Python generator uses separate
 seeds for the two modules. Separate base addresses and distinct reference
 results catch accidental sharing of data or address paths.
+The TB reads packed input tiles directly from `double_buffering_tiled_inputs.txt`.
+`fill_memory()` copies each selected tile into memory, with its first file byte
+at the lowest address; no raw input array or row-to-vector repacking is used.
+For smaller jobs, it selects tiles using the source matrix's `L` stride.
+Weight loading and independent golden-result checking remain row-major.
 
 Use `make stim STIM_SEED=20261007` to regenerate all testbench stimulus/golden
 files reproducibly. The single-macro and Cleopatra tests 1/2 use that seed;
@@ -139,12 +202,16 @@ compatible file directories.
 The streamers read/write simulated memory. The TB compares every result against
 Python golden files and checks output guard bytes. Small, signed, biased, and
 queued tests use separate compact `top_*_golden.txt` files generated alongside
-the full-matrix golden. The HCI memory responder is in `tb/tb_dimc_memory.sv`;
-it only supplies memory handshakes and checks memory-request bounds/direction.
+the full-matrix golden. `tb_dimc_top` contains the shared sparse byte array and directly drives both
+HCI memory interfaces in its `memory_handling` blocks. These blocks check
+request bounds/direction, write accepted output beats into the array, and
+queue input/weight read responses until their configured delivery cycle and
+DIMC's `r_ready`. They preserve consecutive read acceptance and the existing
+stall/delay tests. No interconnect or bank modules are instantiated.
 
 Regression covers both modules, signed arithmetic, bias, queued contexts,
 invalid dimensions, module 2 address alignment/overflow, independent holds
-on each of the six channels, asymmetric completion, and abort/restart.
+on input, weight, and output request classes on both shared ports, asymmetric completion, and abort/restart.
 Tests hold a channel indefinitely until the other module has completed;
 this verifies independent progress rather than just different latencies.
 
@@ -180,12 +247,15 @@ macro activity without changing the job or its handshakes.
 | 20 | Reject module 1 weight-address overflow |
 | 21 | Reject module 2 weight-address overflow |
 | 22 | Reject unsupported compute mode |
+| 23 | Two occupied contexts, third-acquire rejection, original byte status layout, configuration isolation, and two queue wraparounds |
+| 24 | Abort a full queue, discard queued jobs, then restart |
+| 25 | 47-cycle read responses under shared-port contention and grant stalls |
 
 Run all tests with `make sim-top`, or select one using `make sim-top TOP_TEST=N`.
-At the simulator level, use `+TEST=N`; `+TEST=0` is the default and runs all 22.
+At the simulator level, use `+TEST=N`; `+TEST=0` is the default and runs all 25.
 A failed check stops the simulation with the test number and reason. A timeout
 also names the active test. The final summary states the number of passed tests.
-Test 1 writes `sim/test1_timing_kernel_<rows>x<cols>_input_<rows>x<cols>_run_<N>.txt`,
+Test 1 writes `timing_analysis/timing_report_<N>.txt` (or the directory selected by `+TIMING_REPORT_DIR=...`),
 choosing the next unused run number so previous reports remain intact. It starts
 with the measured total
 elapsed cycles and each module's input, kernel, and output matrix sizes. This
@@ -234,3 +304,35 @@ current TB storage supports K=1..4, L=1..4, Q=1..2. Other numbered tests require
 the default 4/3/2 source matrices. Reports include dimensions and the next unused
 run number, so the existing `sim/test1_timing_report.txt` and earlier runs remain
 intact.
+
+## Performance checks
+
+The inline memory handling in `tb_dimc_top` accepts queued reads and returns
+ordered delayed responses; it does not limit the accelerator to one read per
+round trip. Memory stalls, delayed responses, and concurrent reads/writes are
+exercised through the top-level tests. There is no separate mux testbench.
+
+For timing runs, `+MIN_MACS_PER_CYCLE=100` makes Test 1 fail below that per-module
+throughput. Choose a threshold appropriate for the matrix size: small jobs pay
+startup and final-write costs. `+QUIET_TIMING` suppresses console cycle events
+while retaining the report timeline. `+SUMMARY_TIMING` also omits the timeline
+from the report, for large performance checks. Ordinary experiment runs still
+produce the full timeline and recompile the updated RTL by default.
+
+**Historical measurements before removal of the row-major input reader and
+transpose buffers**, with the same operand files and two-cycle response delay:
+
+| K/L/Q | Previous shared-port cycles | Pipelined cycles | Previous MACs/cycle | Pipelined MACs/cycle |
+|---|---:|---:|---:|---:|
+| 1/1/1 | 813 | 556 | 40.3050 | 58.9353 |
+| 4/3/2 | 18,878 | 7,560 | 41.6587 | 104.0254 |
+| 12/15/17 | 2,951,372 | 901,333 | 33.9741 | 111.2464 |
+
+These historical entries are per module, include startup and final writes, and passed
+full output comparisons for both modules. The 25-test suite, Q=3/Q=5 row
+packing cases, and queue-saturation arbiter test also passed. The original
+six-port single-tile run took 498 cycles; the pipelined shared port still
+has an initial bandwidth cost, even though long jobs recover computation overlap.
+
+The packed-input simplification has not been compiled, simulated, or timed;
+verification was explicitly deferred for this change.

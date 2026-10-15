@@ -29,9 +29,9 @@ module dimc_datapath
   import dimc_package::*;
 #(
   parameter int unsigned SECTION_WIDTH  = 256, // width of one DIMC memory/compute section
-  parameter int unsigned INP_FIFO_DEPTH = 32,
+  parameter int unsigned INP_FIFO_DEPTH = 8,
   parameter int unsigned WGT_FIFO_DEPTH = 128,
-  parameter int unsigned OUT_FIFO_DEPTH = 64
+  parameter int unsigned OUT_FIFO_DEPTH = 32
 )
 (
   input  logic                 clk_i,
@@ -108,10 +108,12 @@ module dimc_datapath
   logic inp_full, inp_empty, wgt_full, wgt_empty, inp_push, wgt_push;
   // Received counts track stream -> FIFO transfers; loaded counts track
   // FIFO -> macro transfers. Receiving a beat does not mean it is loaded yet.
-  // These counts describe the tile being LOADED (the next tile during RUN).
+  // Weight counts describe the loading tile (next during RUN). Separate
+  // input counts distinguish active-tile sections from next-tile prefetch.
   logic [7:0] weights_received_q, weights_loaded_q;
-  logic [5:0] inputs_received_q;
-  // first_sections_q counts 0..4 sections of the loading macro's vector 0.
+  logic [5:0] inputs_received_q, next_inputs_received_q;
+  logic [2:0] next_first_sections_q;
+  // first_sections_q counts 0..4 sections of the active macro's vector 0.
   // vector_q (0..7), section_q (0..3), and row_q (0..31) describe the ACTIVE
   // macro's computation. results_q counts 0..256 results actually accumulated,
   // rather than compute commands issued: the pipeline takes time to finish.
@@ -153,39 +155,31 @@ module dimc_datapath
   assign has_next = (l_q != l_size_q-1) || (q_q != q_size_q-1) ||
                     (k_q != k_size_q-1);
   assign load_enable = (state_q == LOAD_FIRST) || (state_q == RUN && has_next);
-  assign load_macro = (state_q == LOAD_FIRST) ? 1'b0 : ~active_q;
+  assign load_macro = (state_q == LOAD_FIRST) ? active_q : ~active_q;
   // Backpressure: deassert ready when the FIFO is full or the expected tile
   // has already arrived. The sender must retain valid/data until accepted.
   // Both streams are independent and can stall for different durations.
-  assign input_i.ready = core_rst_n && load_enable &&
-                         inputs_received_q < INPUT_BEATS && !inp_full;
+  assign input_i.ready = core_rst_n && (state_q == LOAD_FIRST || state_q == RUN) &&
+                         (inputs_received_q < INPUT_BEATS || (state_q == RUN && has_next && next_inputs_received_q < INPUT_BEATS)) && !inp_full;
   assign kernel_i.ready = core_rst_n && load_enable &&
                           weights_received_q < WEIGHT_BEATS && !wgt_full;
   assign inp_push = input_i.valid && input_i.ready;
   assign wgt_push = kernel_i.valid && kernel_i.ready;
   assign weight_load = load_enable && weights_loaded_q < WEIGHT_BEATS && !wgt_empty;
-  // The shared feature FIFO belongs to the current tile until its last
-  // vector has been loaded. Only then may the other macro consume from it.
-  // Initially queue all 32 input beats, then load vector 0 into macro 0.
-  // During RUN, the FIFO first contains the current tile's remaining vectors;
-  // incoming next-tile beats are appended behind them. vector_q == 7 means
-  // the last current vector is already in the macro, so the FIFO head now
-  // belongs to the next tile. first_load may then feed the other macro.
-  assign first_load = load_enable && first_sections_q < NUM_SECTIONS && !inp_empty &&
-                      ((state_q == LOAD_FIRST && inputs_received_q == INPUT_BEATS) ||
-                       (state_q == RUN && vector_q == 7));
+  // Start with only vector 0 buffered. Later vectors stream during RUN.
+  // Once vector 7 is loaded, the FIFO head belongs to the next tile and
+  // its first vector can load into the inactive macro without contention.
+  assign first_load = !inp_empty &&
+    ((state_q == LOAD_FIRST && first_sections_q < NUM_SECTIONS) ||
+     (state_q == RUN && has_next && vector_q == 7 && next_first_sections_q < NUM_SECTIONS));
   assign feature_load = state_q == RUN && compute_state_q == FEATURES && !inp_empty;
-  // Prepared means all weights are in the macro, vector 0 is in its feature
-  // buffer, and the other seven vectors have arrived and remain in the FIFO.
-  // In LOAD_FIRST this describes the first tile, despite the signal name.
-  assign next_loaded = weights_loaded_q == WEIGHT_BEATS &&
-                       inputs_received_q == INPUT_BEATS && first_sections_q == NUM_SECTIONS;
+  assign next_loaded = weights_loaded_q == WEIGHT_BEATS;
   // A phase is one tile product, not the whole job or necessarily a completed
   // output tile. Wait for both computation and the parallel loader to finish.
   assign phase_complete = compute_state_q == DRAIN && results_q == 256 &&
-                          (!has_next || next_loaded);
+                          (!has_next || (next_loaded && next_first_sections_q == NUM_SECTIONS));
   // Normal tile clear resets only accumulators/selector. It preserves the
-  // next tile already loaded in the other macro and queued in the FIFOs.
+  // next weights already loaded in the other macro.
   assign acc_clear = state_q == CLEAR_TILE || (state_q == IDLE && start_i);
 
   // Combinational logic chooses the control pins for the current cycle.
@@ -208,7 +202,7 @@ module dimc_datapath
       end
       if (first_load) begin
         fcsn[load_macro] = 1'b0;
-        fa[load_macro] = first_sections_q[1:0];
+        fa[load_macro] = state_q == RUN ? next_first_sections_q[1:0] : first_sections_q[1:0];
       end
       if (state_q == RUN) begin
         if (compute_state_q == ROWS) begin
@@ -277,6 +271,7 @@ module dimc_datapath
       weights_received_q <= 0;
       weights_loaded_q <= 0;
       inputs_received_q <= 0;
+      next_inputs_received_q <= 0; next_first_sections_q <= 0;
       first_sections_q <= 0;
       vector_q <= 0;
       section_q <= 0;
@@ -288,10 +283,16 @@ module dimc_datapath
       // on actual transfers. State-transition assignments later in this block
       // take priority when a counter must restart for a new loading phase.
       done_o <= 0;
-      if (inp_push) inputs_received_q <= inputs_received_q + 1'b1;
+      if (inp_push) begin
+        if (inputs_received_q < INPUT_BEATS) inputs_received_q <= inputs_received_q+1'b1;
+        else next_inputs_received_q <= next_inputs_received_q+1'b1;
+      end
       if (wgt_push) weights_received_q <= weights_received_q + 1'b1;
       if (weight_load) weights_loaded_q <= weights_loaded_q + 1'b1;
-      if (first_load) first_sections_q <= first_sections_q + 1'b1;
+      if (first_load) begin
+        if (state_q == RUN) next_first_sections_q <= next_first_sections_q+1'b1;
+        else first_sections_q <= first_sections_q+1'b1;
+      end
       if (result_pop) results_q <= results_q + 1'b1;
       case (state_q)
         IDLE: if (start_i && valid_config) begin
@@ -311,7 +312,7 @@ module dimc_datapath
           active_q <= 0;
           weights_received_q <= 0;
           weights_loaded_q <= 0;
-          inputs_received_q <= 0;
+          inputs_received_q <= 0; next_inputs_received_q <= 0; next_first_sections_q <= 0;
           first_sections_q <= 0;
           vector_q <= 0;
           section_q <= 0;
@@ -320,13 +321,11 @@ module dimc_datapath
           compute_state_q <= ROWS;
           state_q <= LOAD_FIRST;
         end
-        LOAD_FIRST: if (next_loaded) begin
-          // Macro 0 has its kernel and first vector; seven vectors remain queued.
+        LOAD_FIRST: if (next_loaded && first_sections_q == NUM_SECTIONS) begin
+          // The active macro has its kernel and first vector; later vectors stream.
           // Reset loading counters for the NEXT tile without flushing FIFOs.
           weights_received_q <= 0;
           weights_loaded_q <= 0;
-          inputs_received_q <= 0;
-          first_sections_q <= 0;
           state_q <= RUN;
         end
         RUN: begin
@@ -374,7 +373,8 @@ module dimc_datapath
           end
         end
         ADVANCE: begin
-          // The other macro is fully prepared; advance in l-fastest order.
+          // The other macro has its weights and first vector. Carry the
+          // prefetched input counts across the switch without flushing data.
           // Example L=2,Q=2: (k,0,0), (k,0,1), (k,1,0), (k,1,1),
           // then (k+1,0,0). Reset compute progress and next-tile load counts.
           active_q <= ~active_q;
@@ -385,16 +385,15 @@ module dimc_datapath
               k_q <= k_q + 1'b1;
             end else q_q <= q_q + 1'b1;
           end else l_q <= l_q + 1'b1;
-          weights_received_q <= 0;
-          weights_loaded_q <= 0;
-          inputs_received_q <= 0;
-          first_sections_q <= 0;
+          inputs_received_q <= next_inputs_received_q;
+          next_inputs_received_q <= 0; next_first_sections_q <= 0;
+          first_sections_q <= next_first_sections_q;
           vector_q <= 0;
           section_q <= 0;
           row_q <= 0;
           results_q <= 0;
           compute_state_q <= ROWS;
-          state_q <= RUN;
+          state_q <= LOAD_FIRST;
         end
         default: state_q <= IDLE;
       endcase
@@ -405,8 +404,8 @@ module dimc_datapath
   // than creating extra datapath circuitry in synthesis.
   // synthesis translate_off
   initial begin
-    assert (SECTION_WIDTH == 256 && INP_FIFO_DEPTH >= INPUT_BEATS)
-      else $fatal(1, "Datapath requires 256-bit sections and an input FIFO of at least 32 sections");
+    assert (SECTION_WIDTH == 256 && INP_FIFO_DEPTH >= 4)
+      else $fatal(1, "Datapath requires 256-bit sections and an input FIFO of at least four sections");
   end
   always @(posedge clk_i) begin
     if (core_rst_n && state_q == IDLE && start_i)

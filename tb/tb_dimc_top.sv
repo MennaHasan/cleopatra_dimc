@@ -4,23 +4,18 @@
 `timescale 1ns/1ps
 module tb_dimc_top;
   import dimc_package::*;
-  import tb_dimc_memory::*;
+  // Shared simulation storage, loaded from stimulus files and checked below.
+  byte unsigned mem [int unsigned];
   logic clk=0;
   always #5ns clk=~clk;
   logic rst_n=0, stalls=0, busy;
   logic [1:0] hold_input='0, hold_weight='0, hold_output='0;
   logic [1:0][1:0] evt;
   hwpe_ctrl_intf_periph #(.ID_WIDTH(10)) periph (.clk(clk));
-  hci_core_intf #(.DW(64), .IW(1), .EW(0), .EHW(0)) input_mem (.clk(clk));
-  hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) weight_mem (.clk(clk));
-  hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) output_mem (.clk(clk));
-  hci_core_intf #(.DW(64), .IW(1), .EW(0), .EHW(0)) input_mem_2 (.clk(clk));
-  hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) weight_mem_2 (.clk(clk));
-  hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) output_mem_2 (.clk(clk));
+  hci_core_intf #(.DW(256), .IW(1), .EW(0), .EHW(0)) memory [0:1] (.clk(clk));
   dimc_top i_dut (
     .clk_i(clk), .rst_ni(rst_n), .busy_o(busy), .evt_o(evt),
-    .periph, .input_tcdm(input_mem), .kernel_tcdm(weight_mem), .output_tcdm(output_mem),
-    .input_tcdm_2(input_mem_2), .kernel_tcdm_2(weight_mem_2), .output_tcdm_2(output_mem_2)
+    .periph, .tcdm(memory[0]), .tcdm_2(memory[1])
   );
   // Assigned after reading matrix dimensions; leave aligned guard space.
   int unsigned WBASE, IBASE, OBASE, WBASE_2, IBASE_2, OBASE_2;
@@ -28,33 +23,80 @@ module tb_dimc_top;
   int response_delay=2;
   int input_count, weight_count, output_count;
   int input_count_2, weight_count_2, output_count_2;
-  tb_dimc_memory_port #(.DW(64), .SALT(1)) i_input_memory (
-    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .response_delay_i(response_delay), .hold_i(hold_input[0]), .port(input_mem),
-    .region_base_i(32'(IBASE)), .region_bytes_i(input_bytes), .transfers_o(input_count)
-  );
-  tb_dimc_memory_port #(.DW(256), .SALT(2)) i_weight_memory (
-    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .response_delay_i(response_delay), .hold_i(hold_weight[0]), .port(weight_mem),
-    .region_base_i(32'(WBASE)), .region_bytes_i(weight_bytes), .transfers_o(weight_count)
-  );
-  tb_dimc_memory_port #(.DW(256), .SALT(3), .WRITE_PORT(1)) i_output_memory (
-    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .response_delay_i(response_delay), .hold_i(hold_output[0]), .port(output_mem),
-    .region_base_i(32'(OBASE)), .region_bytes_i(output_bytes), .transfers_o(output_count)
-  );
-  tb_dimc_memory_port #(.DW(64), .SALT(4)) i_input_memory_2 (
-    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .response_delay_i(response_delay), .hold_i(hold_input[1]), .port(input_mem_2),
-    .region_base_i(32'(IBASE_2)), .region_bytes_i(input_bytes), .transfers_o(input_count_2)
-  );
-  tb_dimc_memory_port #(.DW(256), .SALT(5)) i_weight_memory_2 (
-    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .response_delay_i(response_delay), .hold_i(hold_weight[1]), .port(weight_mem_2),
-    .region_base_i(32'(WBASE_2)), .region_bytes_i(weight_bytes), .transfers_o(weight_count_2)
-  );
-  tb_dimc_memory_port #(.DW(256), .SALT(6), .WRITE_PORT(1)) i_output_memory_2 (
-    .clk_i(clk), .rst_ni(rst_n), .stalls_i(stalls), .response_delay_i(response_delay), .hold_i(hold_output[1]), .port(output_mem_2),
-    .region_base_i(32'(OBASE_2)), .region_bytes_i(output_bytes), .transfers_o(output_count_2)
-  );
-  logic [7:0] weights[], inputs[];
+  // Direct behavioral HCI handling: one copy per DIMC port, sharing mem.
+  // Keep queued reads so consecutive requests and response backpressure work.
+  // These queues are simulation bookkeeping, not accelerator FIFOs.
+  int input_counts[2], weight_counts[2], output_counts[2];
+  assign input_count=input_counts[0];
+  assign weight_count=weight_counts[0];
+  assign output_count=output_counts[0];
+  assign input_count_2=input_counts[1];
+  assign weight_count_2=weight_counts[1];
+  assign output_count_2=output_counts[1];
+  for (genvar p=0;p<2;p++) begin : memory_handling
+    typedef struct packed {logic [255:0] data; logic id; int due;} response_t;
+    response_t responses[64];
+    int rd=0, wr=0, queued=0;
+    int cycle=0;
+    logic hold_input_q, hold_weight_q, hold_output_q;
+    always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin hold_input_q<=0; hold_weight_q<=0; hold_output_q<=0; end
+      else begin hold_input_q<=hold_input[p]; hold_weight_q<=hold_weight[p]; hold_output_q<=hold_output[p]; end
+    end
+    logic is_input, is_weight, is_output, held, accepted, consumed;
+    logic [31:0] address;
+    logic [255:0] write_data;
+    logic [31:0] byte_en;
+    logic read_, id_;
+    assign is_input = memory[p].add >= (p==0 ? IBASE : IBASE_2) && 64'(memory[p].add)+32 <= 64'((p==0 ? IBASE : IBASE_2))+input_bytes;
+    assign is_weight = memory[p].add >= (p==0 ? WBASE : WBASE_2) && 64'(memory[p].add)+32 <= 64'((p==0 ? WBASE : WBASE_2))+weight_bytes;
+    assign is_output = memory[p].add >= (p==0 ? OBASE : OBASE_2) && 64'(memory[p].add)+32 <= 64'((p==0 ? OBASE : OBASE_2))+output_bytes;
+    assign held = (is_input && hold_input_q) || (is_weight && hold_weight_q) || (is_output && hold_output_q);
+    assign memory[p].gnt = rst_n && memory[p].req && !held && (!memory[p].wen || queued<64) &&
+                      (!stalls || (cycle+(p+1))%5 != 0);
+    assign memory[p].r_valid = rst_n && queued>0 && cycle >= responses[rd].due;
+    assign memory[p].r_data = queued>0 ? responses[rd].data : '0;
+    assign memory[p].r_id = queued>0 ? responses[rd].id : '0;
+    assign memory[p].r_user = '0;
+    assign memory[p].r_opc = 0;
+    assign memory[p].r_ecc = '0;
+    assign memory[p].egnt = '0;
+    assign memory[p].r_evalid = '0;
+    always @(posedge clk) begin
+      if (!rst_n) begin
+        rd=0; wr=0; queued=0; cycle=0; input_counts[p]=0; weight_counts[p]=0; output_counts[p]=0;
+      end else begin
+        accepted=memory[p].req && memory[p].gnt; consumed=memory[p].r_valid && memory[p].r_ready;
+        address=memory[p].add; write_data=memory[p].data; byte_en=memory[p].be; read_=memory[p].wen; id_=memory[p].id;
+        if (accepted) begin
+          assert ((read_ && (is_input || is_weight)) || (!read_ && is_output))
+            else $fatal(1,"Shared memory direction or bounds error: %h",address);
+          if (is_input) input_counts[p]++;
+          if (is_weight) weight_counts[p]++;
+          if (is_output) output_counts[p]++;
+        end
+        #0;
+        if (consumed) begin rd=(rd+1)%64; queued--; end
+        if (accepted) begin
+          if (read_) begin
+            assert (queued<64) else $fatal(1,"Read response queue overflow");
+            for (int b=0;b<32;b++) responses[wr].data[b*8 +: 8]=mem[address+b];
+            responses[wr].id=id_; responses[wr].due=cycle+response_delay;
+            wr=(wr+1)%64; queued++;
+          end else begin
+            assert (&byte_en) else $fatal(1,"Partial output beat");
+            for (int b=0;b<32;b++) if (byte_en[b]) mem[address+b]=write_data[b*8 +: 8];
+          end
+        end
+        cycle <= cycle+1;
+      end
+    end
+  end
+  logic [7:0] weights[];
+  logic [8191:0] input_tiles[];
   logic [31:0] golden[];
-  logic [7:0] weights_2[], inputs_2[];
+  logic [7:0] weights_2[];
+  logic [8191:0] input_tiles_2[];
   logic [31:0] golden_2[];
   string stimulus_dir_1="stimuli/double_buffering";
   string stimulus_dir_2="stimuli/double_buffering_module2";
@@ -109,7 +151,7 @@ module tb_dimc_top;
     .compute_tile_i(timing_compute_tile), .compute_vector_i(timing_compute_vector),
     .feature_load_i(timing_feature_load), .compute_issue_i(timing_compute_issue),
     .feature_section_i(timing_feature_section), .compute_row_i(timing_compute_row),
-    .output_grant_i({output_mem_2.req && output_mem_2.gnt, output_mem.req && output_mem.gnt}),
+    .output_grant_i({i_dut.i_module_2.output_tcdm.req && i_dut.i_module_2.output_tcdm.gnt, i_dut.i_module_1.output_tcdm.req && i_dut.i_module_1.output_tcdm.gnt}),
     .done_o(test1_timing_done)
   );
 
@@ -175,20 +217,25 @@ module tb_dimc_top;
     for (int i=0;i<8;i++) reg_write(DIMC_REG_WRITE_MASK+i,'1);
   endtask
 
-  // Store the selected matrices contiguously, row-major, in simulated memory.
-  // File strides follow the source matrix dimensions; memory strides use this job's sizes.
+  // Weights/results stay row-major. Copy packed input tiles directly from
+  // the tiled-input file order into memory, first file byte at lowest address.
+  // Source tile stride is matrix_l; selected jobs can use fewer inner tiles.
   task automatic fill_memory(input int nk,nl,nq);
     weight_bytes=nk*32*nl*128;
     input_bytes=nl*128*nq*8;
     output_bytes=nk*32*nq*8*4;
     for (int r=0;r<nk*32;r++)
       for (int c=0;c<nl*128;c++) mem[WBASE+r*nl*128+c]=weights[r*(matrix_l*128)+c];
-    for (int r=0;r<nl*128;r++)
-      for (int c=0;c<nq*8;c++) mem[IBASE+r*nq*8+c]=inputs[r*(matrix_q*8)+c];
+    for (int q=0;q<nq;q++)
+      for (int l=0;l<nl;l++)
+        for (int b=0;b<1024;b++)
+          mem[IBASE+(q*nl+l)*1024+b]=input_tiles[q*matrix_l+l][8191-b*8 -:8];
     for (int r=0;r<nk*32;r++)
       for (int c=0;c<nl*128;c++) mem[WBASE_2+r*nl*128+c]=weights_2[r*(matrix_l*128)+c];
-    for (int r=0;r<nl*128;r++)
-      for (int c=0;c<nq*8;c++) mem[IBASE_2+r*nq*8+c]=inputs_2[r*(matrix_q*8)+c];
+    for (int q=0;q<nq;q++)
+      for (int l=0;l<nl;l++)
+        for (int b=0;b<1024;b++)
+          mem[IBASE_2+(q*nl+l)*1024+b]=input_tiles_2[q*matrix_l+l][8191-b*8 -:8];
     for (int b=-32;b<int'(output_bytes)+32;b++) begin
       mem[OBASE+b]='ha5;
       mem[OBASE_2+b]='ha5;
@@ -285,7 +332,7 @@ module tb_dimc_top;
     begin_test(3,"Memory stalls");
     fill_memory(4,3,2); // Load both modules: weights 128x384, inputs 384x16.
     configure(4,3,2,0,0); // Shared K/L/Q=4/3/2; unsigned 8-bit, bias=0 per inner tile.
-    stalls=1; // Periodically withhold grants on all six memory channels.
+    stalls=1; // Periodically withhold grants on both shared memory ports.
     start_job();
     wait_completion();
     check_idle();
@@ -435,7 +482,7 @@ module tb_dimc_top;
     configure(4,3,2); // Shared K/L/Q=4/3/2; unsigned 8-bit, bias=0 per inner tile.
     response_delay=30; // Return memory read responses after 30 cycles.
     start_job();
-    wait(input_mem.req && input_mem.gnt);
+    wait(i_dut.i_module_1.input_tcdm.req && i_dut.i_module_1.input_tcdm.gnt);
     wr('h14,0); // Request shared abort/soft clear.
     repeat (5) @(negedge clk);
     check_condition(busy,"Abort did not wait for outstanding read responses");
@@ -454,7 +501,7 @@ module tb_dimc_top;
     hold_output[0]=1; // Block module 1 output memory grants.
     start_job();
     wait_module_done(2); // Wait for module 2 to finish independently.
-    wait(output_mem.req);
+    wait(i_dut.i_module_1.output_tcdm.req);
     wr('h14,0); // Request shared abort/soft clear.
     repeat (10) @(negedge clk);
     check_condition(busy,"Abort cleared before the stalled output burst drained");
@@ -475,7 +522,7 @@ module tb_dimc_top;
     hold_output[1]=1; // Block module 2 output memory grants.
     start_job();
     wait_module_done(1); // Wait for module 1 to finish independently.
-    wait(output_mem_2.req);
+    wait(i_dut.i_module_2.output_tcdm.req);
     wr('h14,0); // Request shared abort/soft clear.
     repeat (10) @(negedge clk);
     check_condition(busy,"Abort cleared before the stalled output burst drained");
@@ -495,7 +542,7 @@ module tb_dimc_top;
     configure(4,3,2); // Shared K/L/Q=4/3/2; unsigned 8-bit, bias=0 per inner tile.
     response_delay=30; // Return memory read responses after 30 cycles.
     start_job();
-    wait(input_mem.req && input_mem.gnt);
+    wait(i_dut.i_module_1.input_tcdm.req && i_dut.i_module_1.input_tcdm.gnt);
     wr('h14,0); // Request shared abort/soft clear.
     wait_abort();
     repeat (8) @(negedge clk);
@@ -616,12 +663,96 @@ module tb_dimc_top;
     pass_test();
   endtask
 
+  task automatic test_23;
+    logic [31:0] acquired, got;
+    begin_test(23,"Two job contexts, queue full, configuration isolation and wraparound");
+    fill_memory(1,1,1);
+    output_bytes=2*1024;
+    stalls=1; response_delay=13;
+    // Fill and drain twice to exercise context-pointer wraparound.
+    for (int round_=0; round_<2; round_++) begin
+      hold_output='1;
+      for (int job=0; job<2; job++) begin
+        configure(1,1,1,0,job+round_*2);
+        reg_write(DIMC_REG_OUTPUT_ADDR,OBASE+job*1024);
+        reg_write(DIMC_REG_OUTPUT_ADDR_2,OBASE_2+job*1024);
+        wr('h00,0);
+      end
+      access(1,'h04,0,acquired);
+      check_condition(acquired[31],"Third context acquisition must fail while both contexts are pending");
+      access(1,'h0c,0,status);
+      check_condition(status==32'h00000101,"Both original byte-sized context status fields must be occupied");
+      hold_output='0;
+      for (int job=0; job<2; job++) wait_completion();
+      access(1,'h0c,0,status);
+      check_condition(status==0,"Context status did not clear after queue drain");
+      check_idle();
+      $readmemh({stimulus_dir_1,"/top_small_golden.txt"},golden,0,255);
+      $readmemh({stimulus_dir_2,"/top_small_golden.txt"},golden_2,0,255);
+      for (int job=0; job<2; job++) begin
+        for (int i=0; i<256; i++) begin
+          got=0;
+          for (int b=0;b<4;b++) got[b*8 +:8]=mem[OBASE+job*1024+i*4+b];
+          check_condition(got==golden[i]+job+round_*2,"Queued module 1 context corrupted");
+          for (int b=0;b<4;b++) got[b*8 +:8]=mem[OBASE_2+job*1024+i*4+b];
+          check_condition(got==golden_2[i]+job+round_*2,"Queued module 2 context corrupted");
+        end
+      end
+    end
+    pass_test();
+  endtask
+
+  task automatic test_24;
+    begin_test(24,"Abort discards all queued contexts and permits restart");
+    fill_memory(1,1,1);
+    hold_input='1;
+    for (int job=0;job<2;job++) begin
+      configure(1,1,1,0,job);
+      wr('h00,0);
+    end
+    wr('h14,0);
+    repeat (10) @(negedge clk);
+    check_condition(busy,"Abort did not preserve stalled request");
+    hold_input='0;
+    wait_abort();
+    repeat (100) begin
+      @(negedge clk);
+      check_condition(!busy && !evt[0][0],"Aborted queued job restarted or completed");
+    end
+    configure(1,1,1);
+    start_job(); wait_completion(); check_idle();
+    check_results(1,1,"top_small_golden.txt");
+    pass_test();
+  endtask
+
+  task automatic test_25;
+    begin_test(25,"Long read latency and shared-port contention");
+    fill_memory(2,2,2);
+    configure(2,2,2);
+    stalls=1; response_delay=47;
+    start_job(); wait_completion(); check_idle();
+    // Compute expectations from row-major weights and packed input bytes.
+    // For this L=2 job, input[n][c] is in tile [c/8][n/128],
+    // vector c%8, byte n%128.
+    for (int m=0;m<2;m++) begin
+      for (int r=0;r<64;r++) for (int c=0;c<16;c++) begin
+        logic [31:0] expected_,got;
+        expected_=0; got=0;
+        for (int n=0;n<256;n++)
+          expected_+=32'(mem[(m==0?WBASE:WBASE_2)+r*256+n])*32'(mem[(m==0?IBASE:IBASE_2)+((c/8)*2+n/128)*1024+(c%8)*128+n%128]);
+        for (int b=0;b<4;b++) got[b*8 +:8]=mem[(m==0?OBASE:OBASE_2)+(r*16+c)*4+b];
+        check_condition(got==expected_,"Delayed shared response or result mismatch");
+      end
+    end
+    pass_test();
+  endtask
+
   initial begin
     longint unsigned source_weights, source_inputs, source_outputs, next_base;
     periph.req=0; periph.add=0; periph.wen=1; periph.data=0;
     periph.be='1; periph.id=1;
     void'($value$plusargs("TEST=%d",selected_test));
-    check_condition(selected_test>=0 && selected_test<=22,"TEST must be 0 (all) or 1..22");
+    check_condition(selected_test>=0 && selected_test<=25,"TEST must be 0 (all) or 1..25");
     void'($value$plusargs("MATRIX_K=%d",matrix_k));
     void'($value$plusargs("MATRIX_L=%d",matrix_l));
     void'($value$plusargs("MATRIX_Q=%d",matrix_q));
@@ -635,7 +766,7 @@ module tb_dimc_top;
                     source_outputs<=64'h1fffffff,
                     "Matrices exceed supported array indexing or byte-count range");
     weights=new[int'(source_weights)]; weights_2=new[int'(source_weights)];
-    inputs=new[int'(source_inputs)]; inputs_2=new[int'(source_inputs)];
+    input_tiles=new[int'(source_inputs/1024)]; input_tiles_2=new[int'(source_inputs/1024)];
     golden=new[int'(source_outputs)]; golden_2=new[int'(source_outputs)];
     next_base='h1000;
     WBASE=32'(next_base);
@@ -664,9 +795,9 @@ module tb_dimc_top;
     $display("[DIMC_TOP] Module 1 stimulus: %s",stimulus_dir_1);
     $display("[DIMC_TOP] Module 2 stimulus: %s",stimulus_dir_2);
     $readmemh({stimulus_dir_1,"/double_buffering_kernel_stim.txt"},weights,0,matrix_k*32*matrix_l*128-1);
-    $readmemh({stimulus_dir_1,"/double_buffering_feature_stim.txt"},inputs,0,matrix_l*128*matrix_q*8-1);
+    $readmemh({stimulus_dir_1,"/double_buffering_tiled_inputs.txt"},input_tiles,0,matrix_l*matrix_q-1);
     $readmemh({stimulus_dir_2,"/double_buffering_kernel_stim.txt"},weights_2,0,matrix_k*32*matrix_l*128-1);
-    $readmemh({stimulus_dir_2,"/double_buffering_feature_stim.txt"},inputs_2,0,matrix_l*128*matrix_q*8-1);
+    $readmemh({stimulus_dir_2,"/double_buffering_tiled_inputs.txt"},input_tiles_2,0,matrix_l*matrix_q-1);
     if (selected_test==0 || selected_test==1) test_1();
     if (selected_test==0 || selected_test==2) test_2();
     if (selected_test==0 || selected_test==3) test_3();
@@ -689,6 +820,9 @@ module tb_dimc_top;
     if (selected_test==0 || selected_test==20) test_20();
     if (selected_test==0 || selected_test==21) test_21();
     if (selected_test==0 || selected_test==22) test_22();
+    if (selected_test==0 || selected_test==23) test_23();
+    if (selected_test==0 || selected_test==24) test_24();
+    if (selected_test==0 || selected_test==25) test_25();
     $display("[DIMC_TOP] RESULTS: %0d PASSED, 0 FAILED",passed);
     $display("[DIMC_TOP] ALL SELECTED TESTS PASSED");
     tests_passed=1;

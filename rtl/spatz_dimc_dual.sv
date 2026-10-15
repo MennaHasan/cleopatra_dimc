@@ -5,8 +5,8 @@
 * ============================================================
 *      2 DIMC Macros (u_mac0, u_mac1)      
 *      wgt_fifo (Weight FIFO, depth=128):
-*      inp_fifo (Input/Feature FIFO, depth=8):
-*      out_fifo (Output FIFO, depth=32):
+*      inp_fifo (Input/Feature FIFO, depth=32):
+*      out_fifo (Output FIFO, depth=64):
 * ============================================================
 * INDEPENDENT CONTROL / OUTPUT SELECT
 * ============================================================
@@ -34,9 +34,9 @@ module spatz_dimc_dual #(
     // Width of each 256-bit SRAM section (must match spatz_dimc parameter).
     parameter int SECTION_WIDTH  = 256,
     // FIFO depths
-    parameter int INP_FIFO_DEPTH = 8,    // input feature FIFO:  2 complete feature vectors (2 × 4 = 8)
+    parameter int INP_FIFO_DEPTH = 32,   // input feature FIFO: one complete input tile (8 vectors × 4 sections)
     parameter int WGT_FIFO_DEPTH = 128,  // weight FIFO:         1 complete kernel (32 rows × 4 sections)
-    parameter int OUT_FIFO_DEPTH = 32    // output result FIFO: one MatVec output (32 words)
+    parameter int OUT_FIFO_DEPTH = 64    // output result FIFO:  2 complete MatVec outputs (2 × 32 = 64)
 )(
     input  logic clk,     // single clock for all sub modules
     input  logic rst_n,   // active-low reset; clears FIFOs, DIMC pipeline regs, and memories

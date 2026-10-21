@@ -49,13 +49,16 @@ def collect_result(report, k, l, q, seeds):
                             summary["cycles"], str(report))))
 
 
-def plot_results(csv_path, output):
+def plot_results(csv_path, output, max_size=None):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     with Path(csv_path).open() as source:
         rows = list(csv.DictReader(source))
+    if max_size is not None:
+        rows = [row for row in rows
+                if 0 <= int(row["k"]) * int(row["l"]) * int(row["q"]) <= max_size]
     if not rows:
         raise ValueError("No completed experiments in {}".format(csv_path))
     rows.sort(key=lambda row: int(row["k"]) * int(row["l"]) * int(row["q"]))
@@ -72,6 +75,8 @@ def plot_results(csv_path, output):
     axes[1].set_ylabel("Measured MACs/cycle per module")
     axes[1].set_title("Experimental throughput")
     for ax in axes:
+        if max_size is not None:
+            ax.set_xlim(0, max_size)
         ax.grid(alpha=.25)
         ax.set_axisbelow(True)
     fig.suptitle("Cleopatra Matrix Size Experiments — Per Module")

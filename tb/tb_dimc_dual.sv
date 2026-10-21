@@ -163,6 +163,7 @@ module tb_dimc_dual;
 
   // End-of-test flag — asserted when simulation finishes
   logic eot = 1'b0;
+  bit tests_passed = 0;
 
   // =========================================================================
   // DUT INSTANTIATION
@@ -876,13 +877,13 @@ module tb_dimc_dual;
         end
 
         // Test -------------------------
-        if (out_data != golden_psout[0]) begin
+        if (out_data !== golden_psout[0]) begin
             test_fail = 1;
         end
         out_pop = 1'b1;
           for (int i = 1; i < 32; i++) begin
             @(posedge clk); #TestTime;
-            if (out_data != golden_psout[i]) begin
+            if (out_data !== golden_psout[i]) begin
               test_fail = 1;
             end
           end
@@ -939,7 +940,7 @@ module tb_dimc_dual;
               out_pop = 1'b0;
             end else begin
               out_pop = 1'b1;
-              if (out_data != golden_psout[i-5]) begin
+              if (out_data !== golden_psout[i-5]) begin
                 test_fail = 1;
               end else begin
                 count_correct ++;
@@ -966,6 +967,9 @@ module tb_dimc_dual;
     if (fail_count == 0) $display("[TB] ALL TESTS PASSED");
     else                  $display("[TB] FAILURES DETECTED");
     $display("Testbench: Test finished.");
+    if (fail_count != 0 || pass_count == 0)
+      $fatal(1, "Testbench failed or no tests were enabled");
+    tests_passed = 1;
     eot = 1'b1;
     $finish;
   end
@@ -985,7 +989,7 @@ module tb_dimc_dual;
   // A watchdog trip always indicates a bug (DUT stalls or task deadlock).
   initial begin
     #(50000 * ClkPeriod);
-    $error("[TB] WATCHDOG: simulation exceeded 100 us");
+    $fatal(1, "[TB] WATCHDOG: simulation exceeded 100 us");
     $finish;
   end
 endmodule

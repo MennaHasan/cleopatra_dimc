@@ -5,7 +5,7 @@ Add --start/--end to zoom, or --show to open an interactive matplotlib window.
 Outputs retain the source report number. Zooms add a cycle-range suffix;
 repeated outputs add a version suffix. This script never creates TXT reports.
 Each run also creates a separate summary PNG for the full experiment.
-It removes the observed-load/product count lines from the input TXT report.
+The input TXT report is preserved unchanged.
 Intervals describe reported windows, including any stalls inside those windows.
 FIFO activity is attributed to its destination macro; the FIFO is shared.
 """
@@ -95,17 +95,6 @@ def write_csv(path, data, tile_starts):
             flags = dict(tile_starts[key])
             for cycle, actions in data[key]:
                 writer.writerow((*key, cycle, " | ".join(actions) or "IDLE", flags.get(cycle, "")))
-
-
-def remove_observed_count_lines(path):
-    """Update report presentation without changing its recorded timing events."""
-    path = Path(path)
-    text = path.read_text()
-    cleaned = re.sub(
-        r"^[ \t]*Observed (?:weight tile loads|tile-products completed):[^\n]*(?:\n|$)",
-        "", text, flags=re.MULTILINE)
-    if cleaned != text:
-        path.write_text(cleaned)
 
 
 def read_summary(path):
@@ -291,7 +280,6 @@ def main():
     plot_timeline(plot_path, intervals, flags, last_cycle, args.start, args.end, args.show)
     write_csv(csv_path, data, flags)
     plot_summary(summary_path, summary)
-    remove_observed_count_lines(args.report)
     print("Covered cycles 0..{} for all four macros".format(last_cycle))
     print("Source: {}\nData: {}\nPlot: {}".format(args.report, csv_path, plot_path))
     print("Summary: {}".format(summary_path))

@@ -1,35 +1,6 @@
-// Standalone double-buffered datapath regression. Uses Test 1's matrices,
-// exercises runtime dimensions, source stalls, result backpressure and restart.
-//
-// WHAT THIS FILE DOES
-// A testbench is a simulation environment, not hardware added to the chip.
-// Here it substitutes for the unfinished control module, streamer and result
-// receiver. i_dut (Device Under Test) is the real dimc_datapath RTL instance.
-// The testbench supplies commands/data and checks what the RTL produces.
-// It does NOT drive macro addresses, select macros, or schedule accumulation;
-// those operations are performed by the FSM inside dimc_datapath.
-//
-// JOB vs TASK
-// A job is one complete matrix multiplication, from start to done. It can
-// require many input/weight tile pairs and produce many 32x8 output tiles.
-// A SystemVerilog task is a named, reusable procedure, like a function that
-// can also wait for clock edges and therefore take simulation time to finish.
-// Calling run_job executes one test job; send_inputs/send_weights are helper
-// tasks that supply its data. A task is not itself a hardware processing unit.
-// 'automatic' gives each call its own local variables and argument storage.
-//
-// K/nk = number of 32-row weight groups; L/nl = number of 128-element inner
-// groups; Q/nq = number of 8-column input groups. Thus one job computes:
-//   (nk*32 by nl*128) x (nl*128 by nq*8) -> (nk*32 by nq*8).
-// For each output tile [k][q], nl tile products must be accumulated.
-//
-// TILING vs DELIVERY
-// The Python stimulus generator creates full matrices and tiled files before
-// simulation (make sim-datapath invokes it). This testbench reads those tiles,
-// then sends their 256-bit sections in [k][q][l] order, including repeats.
-// These send loops model the delivery order required of the future streamer.
 `timescale 1ns/1ps
 module tb_dimc_datapath;
+  bit tests_passed = 0;
   // 10 ns clock period. Drive stimulus on falling edges so it is stable when
   // the DUT samples on rising edges; this avoids testbench/DUT sampling races.
   logic clk = 0;
@@ -57,11 +28,6 @@ module tb_dimc_datapath;
   );
 
   // Fixed SOURCE DATASET dimensions: K=4, L=3, Q=2.
-  // Smaller jobs select subsets of it; the RTL itself is not limited to these
-  // test sizes. Array sizes and strides here describe the stimulus files.
-  // 12 weight tiles: each 32 rows * 1024 bits = 32768 bits, indexed k*3+l.
-  // 6 input tiles: each 8 columns * 1024 bits = 8192 bits, indexed q*3+l.
-  // The literal 3 is the dataset's L, even when a test job uses nl=1 or nl=2.
   logic [32767:0] weights [0:11];
   logic [8191:0] inputs [0:5];
   // Untiled row-major matrices are kept ONLY for the independent checker:
@@ -71,10 +37,7 @@ module tb_dimc_datapath;
   logic [7:0] raw_inputs [0:6143];
   logic [31:0] golden [0:2047];
   int overlap_cycles = 0;
-  // Passive monitor: hierarchical references observe internal control pins
-  // but never drive them. Count evidence that double buffering really overlaps
-  // computation on one macro with weight loading on the other.
-  // Also ensure two macros never consume the shared FIFO simultaneously.
+  
   always @(posedge clk) begin
     if (rst_n && !clear &&
         ((i_dut.compe[0] && !i_dut.wcsn[1]) ||
@@ -86,8 +49,7 @@ module tb_dimc_datapath;
   end
 
   // Model the streamer's input-data source for an entire job.
-  // Each [k][q][l] step sends input tile [l][q]; k does not affect which input
-  // tile is selected, so the same tiles are deliberately resent for each k.
+  // Each [k][q][l] step sends input tile [l][q];
   // gap inserts deterministic pauses to check that the RTL tolerates stalls.
   task automatic send_inputs(input int nk, nl, nq, gap);
     for (int k = 0; k < nk; k++)
@@ -109,8 +71,7 @@ module tb_dimc_datapath;
           end
   endtask
 
-  // Model the independent weight source. Each weight tile [k][l] is resent
-  // for each q because a different output-column tile needs the same weights.
+  // Model the independent weight source. 
   // Independent source tasks allow weights and features to arrive concurrently.
   task automatic send_weights(input int nk, nl, nq, gap);
     for (int k = 0; k < nk; k++)
@@ -129,9 +90,7 @@ module tb_dimc_datapath;
   endtask
 
   // Model the result receiver AND check correctness. The output is one entire
-  // 32x8 tile at a time, not one 32-bit stream word. There are nk*nq tiles;
-  // nl does not appear in these receive loops because the RTL has already
-  // accumulated all nl contributions before asserting result_valid.
+  // 32x8 tile at a time
   task automatic receive_results(input int nk, nl, nq);
     logic [31:0] expected, saved [0:31][0:7];
     for (int k = 0; k < nk; k++) begin
@@ -142,19 +101,13 @@ module tb_dimc_datapath;
         for (int r = 0; r < 32; r++) begin
           for (int c = 0; c < 8; c++) begin
             expected = 0;
-            // Independent reference: compute one full dot product directly
-            // from the original untiled matrices, not the DUT's accumulator.
-            // Full row = k*32+r; full column = q*8+c. The source arrays keep
-            // strides 384 and 16 even when the selected job is smaller.
-            // 32' casts widen byte values for multiplication/accumulation.
+            // compute one full dot product directly
             for (int n = 0; n < nl*128; n++)
               expected += 32'(raw_weights[(k*32+r)*384+n]) *
                           32'(raw_inputs[n*16+q*8+c]);
             assert (result[r][c] === expected)
               else $fatal(1, "Tile [%0d,%0d] element [%0d,%0d]: got %h expected %h",
                           k, q, r, c, result[r][c], expected);
-            // The golden file sums all three inner tiles. It also applies to
-            // smaller K/Q subsets, but not to a job that selects fewer L tiles.
             if (nl == 3)
               assert (result[r][c] === golden[(k*32+r)*16+q*8+c])
                 else $fatal(1, "Test 1 golden mismatch");
@@ -170,15 +123,12 @@ module tb_dimc_datapath;
             for (int c = 0; c < 8; c++)
               assert (result[r][c] === saved[r][c]) else $fatal(1, "Result changed while stalled");
         end
-        // After checking stability for 11 cycles, accept the whole tile at
-        // the next rising edge. This releases the DUT to clear accumulators.
         result_ready = 1;
         @(negedge clk);
         result_ready = 0;
       end
     end
-    // Completion must follow acceptance of the LAST tile, with ready low and
-    // no pending result. A further cycle checks that done does not stay high.
+    // A further cycle checks that done does not stay high.
     wait (done);
     @(negedge clk);
     assert (!ready && !result_valid) else $fatal(1, "Job failed to complete");
@@ -186,10 +136,7 @@ module tb_dimc_datapath;
     assert (!done) else $fatal(1, "done must be a pulse");
   endtask
 
-  // Launch and verify one complete matrix multiplication. This task models
-  // control-module setup, then runs both stream sources and the receiver.
-  // It returns only after all three finish. Later calls change dimensions
-  // on the same hardware instance without resetting between successful jobs.
+  // Launch and verify one complete matrix multiplication.
   task automatic run_job(input int nk, nl, nq, gap);
     @(negedge clk);
     weight_rows = nk*32;
@@ -205,9 +152,7 @@ module tb_dimc_datapath;
     weight_cols = 0;
     input_rows = 0;
     input_cols = 0;
-    // fork/join launches these three SIMULATION procedures concurrently.
-    // join waits for all of them. Sequential calls would deadlock: the sender
-    // can be backpressured while the DUT waits for an output to be accepted.
+    // fork/join launches these three  procedures concurrently.
     fork
       send_inputs(nk, nl, nq, gap);
       send_weights(nk, nl, nq, gap);
@@ -216,8 +161,6 @@ module tb_dimc_datapath;
     $display("[DATAPATH] PASS K=%0d L=%0d Q=%0d source_gap=%0d", nk, nl, nq, gap);
   endtask
 
-  // Main test sequence: an initial block runs once at simulation start.
-  // strb='1 marks all 32 bytes valid; partial beats/tiles are not tested here.
   initial begin
     input_stream.valid = 0;
     input_stream.data = 0;
@@ -226,7 +169,6 @@ module tb_dimc_datapath;
     kernel_stream.data = 0;
     kernel_stream.strb = '1;
     // Read pre-generated hexadecimal files into simulation arrays. $readmemh
-    // performs file I/O here; it is not a runtime memory interface in the DUT.
     $readmemh("stimuli/double_buffering/double_buffering_tiled_weights.txt", weights);
     $readmemh("stimuli/double_buffering/double_buffering_tiled_inputs.txt", inputs);
     $readmemh("stimuli/double_buffering/double_buffering_kernel_stim.txt", raw_weights);
@@ -241,8 +183,7 @@ module tb_dimc_datapath;
     run_job(1, 3, 1, 3); // odd number of tile products
     run_job(2, 1, 2, 1); // output/clear boundary after every product
     // Abort during an active pipeline, then restart without external reset.
-    // Supply one tile pair, let computation begin, and assert clear before
-    // completion. The next job must not inherit FIFO data or partial sums.
+    // Supply one tile pair, let computation begin, and assert clear before completion. 
     @(negedge clk);
     weight_rows = 32; weight_cols = 128; input_rows = 128; input_cols = 8;
     start = 1;
@@ -262,10 +203,9 @@ module tb_dimc_datapath;
     run_job(1, 1, 1, 2);
     assert (overlap_cycles > 0) else $fatal(1, "No concurrent compute/load observed");
     $display("[DATAPATH] ALL TESTS PASSED; %0d overlapping compute/load cycles", overlap_cycles);
+    tests_passed = 1;
     $finish;
   end
-  // Independent watchdog runs concurrently with the main initial block.
-  // A stuck handshake/FSM must fail the test instead of simulating forever.
   initial begin
     #2ms;
     $fatal(1, "Datapath timeout");

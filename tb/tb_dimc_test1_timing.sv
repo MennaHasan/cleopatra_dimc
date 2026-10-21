@@ -1,10 +1,9 @@
-// Passive test-1 timing. One observer and one clock give both modules the
-// same timeline. No request queues or latency statistics are collected.
+// Passive test-1 timing for dimc_top
 `timescale 1ns/1ps
 module tb_dimc_test1_timing
   import dimc_package::*;
 (
-  input wire logic clk_i, rst_ni, enable_i, start_request_i,
+  input wire logic clk_i, rst_ni, enable_i, start_request_i, verified_i,
   input wire dimc_config_t config_i,
   input wire logic [1:0] weight_load_i, load_macro_i, active_macro_i, result_push_i,
   input wire logic [1:0] input_push_i,
@@ -17,7 +16,7 @@ module tb_dimc_test1_timing
   input wire logic [1:0] output_grant_i,
   output bit done_o
 );
-  bit running=0;
+  bit running=0, report_written=0;
   longint unsigned cycle=0;
   longint unsigned weight_start[2], vector_start[2][2];
   longint unsigned fifo_vector_start[2];
@@ -50,7 +49,7 @@ module tb_dimc_test1_timing
 
   always @(posedge clk_i) begin
     if (!rst_ni || !enable_i) begin
-      running=0; cycle=0; done_o=0; timeline="";
+      running=0; cycle=0; done_o=0; report_written=0; timeline="";
       for (int m=0;m<2;m++) begin
         results[m]=0; output_beats[m]=0; weights_done[m]=0;
         fifo_input_beats[m]=0; fifo_vector_start[m]=0;
@@ -180,66 +179,67 @@ module tb_dimc_test1_timing
         cycle_report=$sformatf("[TEST1 TIMING] CYCLE %0d\n%s",cycle,events);
         if (!quiet_timing) $display("%s",cycle_report);
         if (!summary_timing) timeline={timeline,cycle_report,"\n"};
-        // Write after completion so the measured total appears before the timeline.
-        if (done_o) begin
-          total_macs=64'(config_i.weight_rows)*64'(config_i.weight_cols)*64'(config_i.input_cols);
-          assert (minimum_macs==0 || total_macs>=64'(minimum_macs)*cycle)
-            else $fatal(1,"Throughput regression: %0f MACs/cycle, required %0d",real'(total_macs)/cycle,minimum_macs);
-          // Choose a free report number to preserve past reports and analyses.
-          report_run=0;
-          do begin
-            report_run++;
-            report_path=$sformatf("%s/timing_report_%0d.txt",report_dir,report_run);
-            // Append/read creates a missing file without a simulator warning.
-            report_file=$fopen(report_path,"a+");
-            if (!report_file) $fatal(1,"Cannot open %s",report_path);
-            void'($fseek(report_file,0,0));
-            report_first_char=$fgetc(report_file);
-            if (report_first_char!=-1) $fclose(report_file);
-          end while (report_first_char!=-1);
+      end
+      // Freeze the measured cycle at the final grant, but publish only after
+      // the TB has checked every result and the public completion status.
+      if (done_o && verified_i && !report_written) begin
+        total_macs=64'(config_i.weight_rows)*64'(config_i.weight_cols)*64'(config_i.input_cols);
+        assert (minimum_macs==0 || total_macs>=64'(minimum_macs)*cycle)
+          else $fatal(1,"Throughput regression: %0f MACs/cycle, required %0d",real'(total_macs)/cycle,minimum_macs);
+        // Choose a free report number to preserve past reports and analyses.
+        report_run=0;
+        do begin
+          report_run++;
+          report_path=$sformatf("%s/timing_report_%0d.txt",report_dir,report_run);
+          // Append/read creates a missing file without a simulator warning.
+          report_file=$fopen(report_path,"a+");
+          if (!report_file) $fatal(1,"Cannot open %s",report_path);
           void'($fseek(report_file,0,0));
-          $fdisplay(report_file,"TEST 1 TIMING REPORT");
-          if (summary_timing) $fdisplay(report_file,"Summary only; cycle timeline disabled for this run.");
-          $fdisplay(report_file,"Total elapsed cycles: %0d (start-request acceptance to both modules' final output writes)",cycle);
-          precision_bits=1 << config_i.mode;
-          $fdisplay(report_file,"Precision used: %0d bits",precision_bits);
-          $fdisplay(report_file,"Signing used: weights=%s; inputs=%s",
-                    (config_i.mode==2'b11 && config_i.sign_8b[0]) ? "signed" : "unsigned",
-                    (config_i.mode==2'b11 && config_i.sign_8b[1]) ? "signed" : "unsigned");
-          $fdisplay(report_file,"Macro weights region: 32 rows x 1024 bits");
-          $fdisplay(report_file,"Macro input vector region: 1024 bits");
-          $fdisplay(report_file,"Matrix sizes for each module (rows x columns):");
-          for (int m=0;m<2;m++) begin
-            $fdisplay(report_file,"  Module %0d:",m+1);
-            $fdisplay(report_file,"    Input:  %0d x %0d = %0d elements; %0d bits/element",
-                      config_i.input_rows,config_i.input_cols,
-                      config_i.input_rows*config_i.input_cols,precision_bits);
-            $fdisplay(report_file,"    Kernel: %0d x %0d = %0d elements; %0d bits/element",
-                      config_i.weight_rows,config_i.weight_cols,
-                      config_i.weight_rows*config_i.weight_cols,precision_bits);
-            $fdisplay(report_file,"    Output: %0d x %0d = %0d elements; 32 bits/element",
-                      config_i.weight_rows,config_i.input_cols,
-                      config_i.weight_rows*config_i.input_cols);
-            $fdisplay(report_file,"    Weight matrix tiles (capacity): %0d bits / 32768 bits = %0.4f tiles",
-                      config_i.weight_rows*config_i.weight_cols*precision_bits,
-                      real'(config_i.weight_rows*config_i.weight_cols*precision_bits)/32768.0);
-            $fdisplay(report_file,"    Observed weight tile loads: %0d",weights_done[m]);
-            $fdisplay(report_file,"    Observed tile-products completed: %0d",tiles_done[m]);
-          end
-          // Both modules have the same dimensions; report each independently.
-          total_macs=64'd1*config_i.weight_rows*config_i.weight_cols*config_i.input_cols;
-          $fdisplay(report_file,"\nThroughput per module (including loading and output writes):");
-          for (int m=0;m<2;m++) begin
+          report_first_char=$fgetc(report_file);
+          if (report_first_char!=-1) $fclose(report_file);
+        end while (report_first_char!=-1);
+        void'($fseek(report_file,0,0));
+        $fdisplay(report_file,"TEST 1 TIMING REPORT");
+        $fdisplay(report_file,"Numerical verification: PASS (both modules)");
+        if (summary_timing) $fdisplay(report_file,"Summary only; cycle timeline disabled for this run.");
+        $fdisplay(report_file,"Total elapsed cycles: %0d (start-request acceptance to both modules' final output writes)",cycle);
+        precision_bits=1 << config_i.mode;
+        $fdisplay(report_file,"Precision used: %0d bits",precision_bits);
+        $fdisplay(report_file,"Signing used: weights=%s; inputs=%s",
+                  (config_i.mode==2'b11 && config_i.sign_8b[0]) ? "signed" : "unsigned",
+                  (config_i.mode==2'b11 && config_i.sign_8b[1]) ? "signed" : "unsigned");
+        $fdisplay(report_file,"Macro weights region: 32 rows x 1024 bits");
+        $fdisplay(report_file,"Macro input vector region: 1024 bits");
+        $fdisplay(report_file,"Matrix sizes for each module (rows x columns):");
+        for (int m=0;m<2;m++) begin
           $fdisplay(report_file,"  Module %0d:",m+1);
-          $fdisplay(report_file,"    Total MACs = %0d output rows x %0d inner elements x %0d output columns = %0d MACs",
-                    config_i.weight_rows,config_i.weight_cols,config_i.input_cols,total_macs);
-          $fdisplay(report_file,"    Total MACs/cycle = %0d MACs / %0d elapsed cycles = %0.4f MACs/cycle",
-                    total_macs,cycle,real'(total_macs)/real'(cycle));
-          end
-          $fdisplay(report_file,"\n%s",timeline);
-          $fclose(report_file);
-          $display("[TEST1 TIMING] Report: %s",report_path);
+          $fdisplay(report_file,"    Input:  %0d x %0d = %0d elements; %0d bits/element",
+                    config_i.input_rows,config_i.input_cols,
+                    config_i.input_rows*config_i.input_cols,precision_bits);
+          $fdisplay(report_file,"    Kernel: %0d x %0d = %0d elements; %0d bits/element",
+                    config_i.weight_rows,config_i.weight_cols,
+                    config_i.weight_rows*config_i.weight_cols,precision_bits);
+          $fdisplay(report_file,"    Output: %0d x %0d = %0d elements; 32 bits/element",
+                    config_i.weight_rows,config_i.input_cols,
+                    config_i.weight_rows*config_i.input_cols);
+          $fdisplay(report_file,"    Weight matrix tiles (capacity): %0d bits / 32768 bits = %0.4f tiles",
+                    config_i.weight_rows*config_i.weight_cols*precision_bits,
+                    real'(config_i.weight_rows*config_i.weight_cols*precision_bits)/32768.0);
         end
+        // Both modules have the same dimensions; report each independently.
+        total_macs=64'd1*config_i.weight_rows*config_i.weight_cols*config_i.input_cols;
+        $fdisplay(report_file,"\nThroughput per module (including loading and output writes):");
+        for (int m=0;m<2;m++) begin
+        $fdisplay(report_file,"  Module %0d:",m+1);
+        $fdisplay(report_file,"    Total MACs = %0d output rows x %0d inner elements x %0d output columns = %0d MACs",
+                  config_i.weight_rows,config_i.weight_cols,config_i.input_cols,total_macs);
+        $fdisplay(report_file,"    Total MACs/cycle = %0d MACs / %0d elapsed cycles = %0.4f MACs/cycle",
+                  total_macs,cycle,real'(total_macs)/real'(cycle));
+        end
+        $fdisplay(report_file,"\n%s",timeline);
+        $fclose(report_file);
+        report_written=1;
+        $display("[TEST1 TIMING] Report: %s",report_path);
       end
     end
   end

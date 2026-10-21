@@ -165,6 +165,7 @@ module tb_dimc;
 
   // End-of-test flag
   logic eot = 1'b0;
+  bit tests_passed = 0;
 
   spatz_dimc #(
     .SECTION_WIDTH (SECTION_WIDTH)
@@ -748,6 +749,9 @@ task automatic load_feature(
     if (fail_count == 0) $display("[TB] ALL TESTS PASSED");
     else                  $display("[TB] FAILURES DETECTED");
     $display("Testbench: Test finished.");
+    if (fail_count != 0 || pass_count == 0)
+      $fatal(1, "Testbench failed or no tests were enabled");
+    tests_passed = 1;
     eot = 1'b1;   // signal completion to any external watcher
     $finish;
   end
@@ -764,7 +768,7 @@ task automatic load_feature(
   // trip always indicates a bug.
   initial begin
     #(5000 * ClkPeriod);
-    $error("[TB] WATCHDOG: simulation exceeded 50 us");
+    $fatal(1, "[TB] WATCHDOG: simulation exceeded 50 us");
     $finish;
   end
 

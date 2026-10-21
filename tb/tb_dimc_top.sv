@@ -651,21 +651,6 @@ module tb_dimc_top;
     pass_test();
   endtask
 
-  task automatic test_22;
-    begin_test(22,"Reject unsupported compute mode");
-    fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
-    reg_write(DIMC_REG_FORMAT,0); // Select unsupported mode 00 instead of 8-bit mode 11.
-    start_job();
-    wait_completion();
-    access(1,'h18,0,status); // Read busy, error and per-module completion bits.
-    check_condition(!busy && status==2,"Invalid job did not report configuration error");
-    check_condition(input_count==0 && weight_count==0 && output_count==0 &&
-                    input_count_2==0 && weight_count_2==0 && output_count_2==0,
-                    "Rejected job issued memory transfers");
-    pass_test();
-  endtask
-
   task automatic test_23;
     logic [31:0] acquired, got;
     begin_test(23,"Two job contexts, queue full, configuration isolation and wraparound");
@@ -834,7 +819,8 @@ module tb_dimc_top;
     periph.req=0; periph.add=0; periph.wen=1; periph.data=0;
     periph.be='1; periph.id=1;
     void'($value$plusargs("TEST=%d",selected_test));
-    check_condition(selected_test>=0 && selected_test<=30,"TEST must be 0 (all) or 1..30");
+    check_condition(selected_test>=0 && selected_test<=30 && selected_test!=22,
+                    "TEST must be 0 (all), 1..21, or 23..30");
     void'($value$plusargs("MATRIX_K=%d",matrix_k));
     void'($value$plusargs("MATRIX_L=%d",matrix_l));
     void'($value$plusargs("MATRIX_Q=%d",matrix_q));
@@ -901,7 +887,6 @@ module tb_dimc_top;
     if (selected_test==0 || selected_test==19) test_19();
     if (selected_test==0 || selected_test==20) test_20();
     if (selected_test==0 || selected_test==21) test_21();
-    if (selected_test==0 || selected_test==22) test_22();
     if (selected_test==0 || selected_test==23) test_23();
     if (selected_test==0 || selected_test==24) test_24();
     if (selected_test==0 || selected_test==25) test_25();

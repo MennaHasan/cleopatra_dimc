@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 # Full-matrix tile counts. Keep these aligned with tb_double_buffering.sv.
-K = 6
-L = 7
-Q = 5
+K = 4
+L = 3
+Q = 2
 
 # DIMC tile dimensions. N is represented here in unsigned 8-bit elements.
 M = 32
@@ -92,45 +92,40 @@ def write_tiled_inputs(path: Path, tiles: InputTiles) -> None:
 
 
 def calculate_golden_matmul(weight_matrix: Matrix, input_matrix: Matrix) -> Matrix:
-    """Model tiled accumulation, including one 32-bit biased sum per L tile."""
-    return [
-        [
-            sum(
-                (
-                    sum(
-                        weight_matrix[row][index] * input_matrix[index][col]
-                        for index in range(
-                            l_index * N_ELEMENTS,
-                            (l_index + 1) * N_ELEMENTS,
-                        )
-                    )
-                    + BIAS
-                )
-                & UINT32_MASK
-                for l_index in range(L)
-            )
-            & UINT32_MASK
-            for col in range(Q * P)
-        ]
-        for row in range(K * M)
-    ]
+    """Compute the full matrix product with one bias addition per output."""
+    return calculate_top_golden(
+        weight_matrix, input_matrix, len(weight_matrix) // M,
+        len(weight_matrix[0]) // N_ELEMENTS, len(input_matrix[0]) // P,
+        bias=BIAS,
+    )
 
 
 def calculate_top_golden(
     weights: Matrix, inputs: Matrix, nk: int, nl: int, nq: int,
     sign_mode: int = 0, bias: int = 0,
+    compute_mask: int = 0, write_mask: int = (1 << 256) - 1,
 ) -> Matrix:
-    """Golden for a top-level test using a subset of the full source matrices."""
+    """Compute W @ X + bias, modulo 2**32; masked writes assume cleared macros."""
     def operand(value: int, signed: bool) -> int:
         return value - 256 if signed and value >= 128 else value
+
+    # Each memory section is byte-reversed on its way into the macro.
+    # Sections 0..3 occupy increasing 256-bit positions in its 1024-bit row.
+    masks = []
+    for n in range(nl * N_ELEMENTS):
+        byte_bit = (31 - n % 32) * 8
+        row_bit = ((n % N_ELEMENTS) // 32) * 256 + byte_bit
+        active = max(0, min(8, 1024 - compute_mask - row_bit))
+        mask = (1 << active) - 1
+        masks.append((mask & ((write_mask >> byte_bit) & 255), mask))
 
     return [
         [
             (sum(
-                operand(weights[r][n], bool(sign_mode & 1))
-                * operand(inputs[n][c], bool(sign_mode & 2))
+                operand(weights[r][n] & masks[n][0], bool(sign_mode & 1))
+                * operand(inputs[n][c] & masks[n][1], bool(sign_mode & 2))
                 for n in range(nl * N_ELEMENTS)
-            ) + nl * bias) & UINT32_MASK
+            ) + bias) & UINT32_MASK
             for c in range(nq * P)
         ]
         for r in range(nk * M)
@@ -255,12 +250,23 @@ def main() -> None:
         "top_bias_golden.txt": (1, 2, 1, 0, -7),
         "top_queued_first_golden.txt": (1, 2, 1, 0, 1),
         "top_queued_second_golden.txt": (1, 2, 1, 3, -9),
+        "top_mixed_01_golden.txt": (1, 3, 1, 1, -17),
+        "top_mixed_10_golden.txt": (1, 3, 1, 2, 23),
+        "top_wrap_golden.txt": (1, 3, 1, 0, 0x7fffffff),
     }
     for filename, settings in top_tests.items():
         if any(needed > available for needed, available in zip(settings[:3], (args.k, args.l, args.q))):
             continue
         write_matrix(args.outdir / filename,
                      calculate_top_golden(kernel_stim, feature_stim, *settings))
+
+    if args.l >= 3:
+        pattern = int("0123456789abcdef13579bdf2468ace0fedcba98765432100f1e2d3c4b5a6978", 16)
+        for mask in (5, 257, 512, 1023):
+            write_matrix(args.outdir / f"top_mask_{mask}_golden.txt",
+                         calculate_top_golden(kernel_stim, feature_stim, 1, 3, 1,
+                                              bias=-11, compute_mask=mask,
+                                              write_mask=pattern))
 
     print(f"Double-buffering stimulus written to {args.outdir.resolve()}")
 

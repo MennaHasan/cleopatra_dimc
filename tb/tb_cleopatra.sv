@@ -143,6 +143,7 @@ module tb_cleopatra;
 
   // End-of-test flag - asserted when simulation finishes
   logic eot = 1'b0;
+  bit tests_passed = 0;
 
   // =========================================================================
   // DUT INSTANTIATION
@@ -312,12 +313,11 @@ module tb_cleopatra;
     end
   endtask
 
-  task automatic request_full_matvec_dimc0(
-  );
+  task automatic request_full_matvec_dimc0(input logic [31:0] bias = BIAS);
 
     for (int i = 0; i < NB_KERNEL_ROWS ; i++) begin
         COMPE = 1'b1; MODE = 2'b11; compute_mask = 10'd0;
-        RA    = {5'(i), 2'b00}; ADDIN = BIAS;
+        RA    = {5'(i), 2'b00}; ADDIN = bias;
         RCSN  = 1'b0; RCSN0 = 1'b0; RCSN1 = 1'b0; RCSN2 = 1'b0; RCSN3 = 1'b0;
         WCSN  = 1'b1; WEN   = 1'b1; FCSN  = 1'b1;
         @(posedge clk); #TestTime; 
@@ -420,7 +420,7 @@ module tb_cleopatra;
                             feature_stim_8times[4*p+1],
                             feature_stim_8times[4*p+2],
                             feature_stim_8times[4*p+3]);
-          request_full_matvec_dimc0();
+          request_full_matvec_dimc0(k == TEST2_K_START ? BIAS : 32'b0);
         end
 
       end
@@ -503,7 +503,7 @@ module tb_cleopatra;
                                 test3_input_stim[l][q][p][2],
                                 test3_input_stim[l][q][p][3]);
               
-              request_full_matvec_dimc0();
+              request_full_matvec_dimc0(l == 0 ? BIAS : 32'b0);
             end
           end
           extra_cycles_stall();
@@ -567,6 +567,9 @@ module tb_cleopatra;
     if (fail_count == 0) $display("[TB] ALL TESTS PASSED");
     else                  $display("[TB] FAILURES DETECTED");
     $display("Testbench: Test finished.");
+    if (fail_count != 0 || pass_count == 0)
+      $fatal(1, "Testbench failed or no tests were enabled");
+    tests_passed = 1;
     eot = 1'b1;
     $finish;
   end

@@ -14,6 +14,7 @@
 `timescale 1ns/1ps
 
 module tb_double_buffering;
+  bit tests_passed = 0;
   import dimc_package::*;
 
   parameter int SECTION_WIDTH = 256;
@@ -304,7 +305,7 @@ module tb_double_buffering;
         for (int vector_index = 0; vector_index < DB_P; vector_index++) begin
           for (int row = 0; row < NB_KERNEL_ROWS; row++) begin
             COMPE_m0 = 1'b1; MODE_m0 = 2'b11; compute_mask_m0 = 10'd0;
-            RA_m0 = {5'(row), 2'b00}; ADDIN_m0 = BIAS;
+            RA_m0 = {5'(row), 2'b00}; ADDIN_m0 = MATMUL_Computed == 0 ? BIAS : 32'b0;
             RCSN_m0 = 1'b0; RCSN0_m0 = 1'b0; RCSN1_m0 = 1'b0;
             RCSN2_m0 = 1'b0; RCSN3_m0 = 1'b0;
             WCSN_m0 = 1'b1; WEN_m0 = 1'b1; FCSN_m0 = 1'b1;
@@ -419,7 +420,7 @@ module tb_double_buffering;
         for (int vector_index = 0; vector_index < DB_P; vector_index++) begin
           for (int row = 0; row < NB_KERNEL_ROWS; row++) begin
             COMPE_m1 = 1'b1; MODE_m1 = 2'b11; compute_mask_m1 = 10'd0;
-            RA_m1 = {5'(row), 2'b00}; ADDIN_m1 = BIAS;
+            RA_m1 = {5'(row), 2'b00}; ADDIN_m1 = MATMUL_Computed == 0 ? BIAS : 32'b0;
             RCSN_m1 = 1'b0; RCSN0_m1 = 1'b0; RCSN1_m1 = 1'b0;
             RCSN2_m1 = 1'b0; RCSN3_m1 = 1'b0;
             WCSN_m1 = 1'b1; WEN_m1 = 1'b1; FCSN_m1 = 1'b1;
@@ -523,7 +524,7 @@ module tb_double_buffering;
     for (int vector_index = 0; vector_index < DB_P; vector_index++) begin
       for (int row = 0; row < NB_KERNEL_ROWS; row++) begin
         COMPE_m0 = 1'b1; MODE_m0 = 2'b11; compute_mask_m0 = 10'd0;
-        RA_m0    = {5'(row), 2'b00}; ADDIN_m0 = BIAS;
+        RA_m0    = {5'(row), 2'b00}; ADDIN_m0 = MATMUL_Computed == 0 ? BIAS : 32'b0;
         RCSN_m0  = 1'b0; RCSN0_m0 = 1'b0; RCSN1_m0 = 1'b0;
         RCSN2_m0 = 1'b0; RCSN3_m0 = 1'b0;
         WCSN_m0  = 1'b1; WEN_m0 = 1'b1; FCSN_m0 = 1'b1;
@@ -573,7 +574,7 @@ module tb_double_buffering;
     for (int vector_index = 0; vector_index < DB_P; vector_index++) begin
       for (int row = 0; row < NB_KERNEL_ROWS; row++) begin
         COMPE_m1 = 1'b1; MODE_m1 = 2'b11; compute_mask_m1 = 10'd0;
-        RA_m1    = {5'(row), 2'b00}; ADDIN_m1 = BIAS;
+        RA_m1    = {5'(row), 2'b00}; ADDIN_m1 = MATMUL_Computed == 0 ? BIAS : 32'b0;
         RCSN_m1  = 1'b0; RCSN0_m1 = 1'b0; RCSN1_m1 = 1'b0;
         RCSN2_m1 = 1'b0; RCSN3_m1 = 1'b0;
         WCSN_m1  = 1'b1; WEN_m1 = 1'b1; FCSN_m1 = 1'b1;
@@ -854,10 +855,12 @@ module tb_double_buffering;
     if (fail_count == 0) $display("[TB] ALL TESTS PASSED");
     else                  $display("[TB] FAILURES DETECTED");
     $display("Testbench: Test finished.");
-    if (fail_count != 0)
+    if (fail_count != 0 || pass_count == 0)
       $fatal(1, "[TB_DOUBLE] Testbench failed");
-    else
+    else begin
+      tests_passed = 1;
       $finish;
+    end
   end
 
   // =========================================================================

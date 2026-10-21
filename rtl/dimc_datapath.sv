@@ -236,14 +236,15 @@ module dimc_datapath
   ) i_cleopatra (
     .clk(clk_i), .rst_n(core_rst_n), .sel(active_q),
     .COMPE_m0(compe[0]), .FCSN_m0(fcsn[0]),
-    .MODE_m0(mode_q), .FA_m0(fa[0]), .ADDIN_m0(bias_q),
+    // Add bias only on the first inner tile when l = 0: sum_l(W_l * X_l) + bias.
+    .MODE_m0(mode_q), .FA_m0(fa[0]), .ADDIN_m0(l_q == 0 ? bias_q : 32'b0),
     .RA_m0(ra[0]), .WA_m0(wa[0]),
     .RCSN_m0(rcsn[0]), .RCSN0_m0(rcsn[0]), .RCSN1_m0(rcsn[0]),
     .RCSN2_m0(rcsn[0]), .RCSN3_m0(rcsn[0]),
     .WCSN_m0(wcsn[0]), .WEN_m0(wcsn[0]), .M_m0(mask_q),
     .compute_mask_m0(compute_mask_q), .sign_8b_m0(sign_q),
     .COMPE_m1(compe[1]), .FCSN_m1(fcsn[1]),
-    .MODE_m1(mode_q), .FA_m1(fa[1]), .ADDIN_m1(bias_q),
+    .MODE_m1(mode_q), .FA_m1(fa[1]), .ADDIN_m1(l_q == 0 ? bias_q : 32'b0),
     .RA_m1(ra[1]), .WA_m1(wa[1]),
     .RCSN_m1(rcsn[1]), .RCSN0_m1(rcsn[1]), .RCSN1_m1(rcsn[1]),
     .RCSN2_m1(rcsn[1]), .RCSN3_m1(rcsn[1]),

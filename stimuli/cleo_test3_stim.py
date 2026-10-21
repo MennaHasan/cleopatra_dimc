@@ -220,24 +220,10 @@ def calculate_matmul(
             "The shared matrix dimension must be divisible by N_ELEMENTS"
         )
 
-    num_l_tiles = weight_cols // N_ELEMENTS
-
     output_matrix = [
         [
-            sum(
-                (
-                    sum(
-                        weight_matrix[row][index]
-                        * input_matrix[index][col]
-                        for index in range(
-                            l_index * N_ELEMENTS,
-                            (l_index + 1) * N_ELEMENTS,
-                        )
-                    )
-                    + bias
-                ) & UINT32_MAX
-                for l_index in range(num_l_tiles)
-            ) & UINT32_MAX
+            (sum(weight_matrix[row][index] * input_matrix[index][col]
+                 for index in range(weight_cols)) + bias) & UINT32_MAX
             for col in range(input_cols)
         ]
         for row in range(len(weight_matrix))

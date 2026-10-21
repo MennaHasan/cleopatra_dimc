@@ -45,9 +45,9 @@ def write_features(path: str, features: np.ndarray) -> None:
                 file.write(section_to_hex(section) + "\n")
 
 
-def biased_outputs(kernel: np.ndarray, features: np.ndarray):
+def biased_outputs(kernel: np.ndarray, features: np.ndarray, bias: int = BIAS):
     return [
-        (compute_dot_product(kernel[row], features[feature_index]) + BIAS)
+        (compute_dot_product(kernel[row], features[feature_index]) + bias)
         & 0xFFFFFFFF
         for feature_index in range(NUM_FEATURE_VECTORS)
         for row in range(NB_KERNEL_ROWS)
@@ -104,7 +104,8 @@ def main() -> None:
             os.path.join(test2_dir, f"feature_stim_8times_{set_index}.txt"),
             feature_sets[set_index],
         )
-        current = biased_outputs(kernel_sets[set_index], feature_sets[set_index])
+        current = biased_outputs(kernel_sets[set_index], feature_sets[set_index],
+                                 BIAS if set_index == TEST2_START else 0)
         for index, value in enumerate(current):
             accumulated[index] = (accumulated[index] + value) & 0xFFFFFFFF
 

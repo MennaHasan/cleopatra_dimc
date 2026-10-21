@@ -5,7 +5,7 @@
 module tb_dimc_top;
   import dimc_package::*;
   // Shared simulation storage, loaded from stimulus files and checked below.
-  byte unsigned mem [int unsigned];
+  logic [7:0] mem [int unsigned]; // Preserve X values; missing data must fail.
   logic clk=0;
   always #5ns clk=~clk;
   logic rst_n=0, stalls=0, busy;
@@ -109,6 +109,7 @@ module tb_dimc_top;
 
   // Test 1 alone uses this passive observer; both modules share its cycle 0.
   logic test1_timing_done;
+  bit test1_verified=0;
   logic [1:0] timing_weight_load, timing_load_macro, timing_active_macro, timing_result_push;
   logic [1:0] timing_input_push;
   logic [1:0][7:0] timing_weight_section;
@@ -142,7 +143,7 @@ module tb_dimc_top;
   assign timing_feature_section[1] = i_dut.i_module_2.i_datapath.fa;
   assign timing_compute_row[1] = i_dut.i_module_2.i_datapath.ra;
   tb_dimc_test1_timing i_test1_timing (
-    .clk_i(clk), .rst_ni(rst_n), .enable_i(test_number==1),
+    .clk_i(clk), .rst_ni(rst_n), .enable_i(test_number==1), .verified_i(test1_verified),
     .start_request_i(periph.req && periph.gnt && !periph.wen && periph.add==0),
     .config_i(i_dut.config_), .weight_load_i(timing_weight_load),
     .load_macro_i(timing_load_macro), .active_macro_i(timing_active_macro),
@@ -291,9 +292,9 @@ module tb_dimc_top;
           got_1[b*8 +: 8]=mem[OBASE+4*index_+b];
           got_2[b*8 +: 8]=mem[OBASE_2+4*index_+b];
         end
-        check_condition(!$isunknown(golden[index_]) && got_1===golden[index_],
+        check_condition(got_1===golden[index_],
           $sformatf("Module 1 result [%0d,%0d]: got %h, golden %h",r,c,got_1,golden[index_]));
-        check_condition(!$isunknown(golden_2[index_]) && got_2===golden_2[index_],
+        check_condition(got_2===golden_2[index_],
           $sformatf("Module 2 result [%0d,%0d]: got %h, golden %h",r,c,got_2,golden_2[index_]));
       end
     end
@@ -314,13 +315,15 @@ module tb_dimc_top;
     check_idle();
     check_results(matrix_k,matrix_q,"double_buffering_golden_matmul_output.txt"); // Compare every output element in both modules.
     check_condition(test1_timing_done,"Test 1 timing did not reach both final output writes");
+    test1_verified=1;
+    @(negedge clk); // Allow the observer to publish the verified report.
     pass_test();
   endtask
 
   task automatic test_2;
     begin_test(2,"Different matrix dimensions");
     fill_memory(2,1,2); // Load both modules: weights 64x128, inputs 128x16.
-    configure(2,1,2,0,0); // Shared K/L/Q=2/1/2; unsigned 8-bit, bias=0 per inner tile.
+    configure(2,1,2,0,0); // Shared K/L/Q=2/1/2; unsigned 8-bit, bias=0 once per output.
     start_job();
     wait_completion();
     check_idle();
@@ -331,7 +334,7 @@ module tb_dimc_top;
   task automatic test_3;
     begin_test(3,"Memory stalls");
     fill_memory(4,3,2); // Load both modules: weights 128x384, inputs 384x16.
-    configure(4,3,2,0,0); // Shared K/L/Q=4/3/2; unsigned 8-bit, bias=0 per inner tile.
+    configure(4,3,2,0,0); // Shared K/L/Q=4/3/2; unsigned 8-bit, bias=0 once per output.
     stalls=1; // Periodically withhold grants on both shared memory ports.
     start_job();
     wait_completion();
@@ -343,7 +346,7 @@ module tb_dimc_top;
   task automatic test_4;
     begin_test(4,"Signed arithmetic");
     fill_memory(1,2,1); // Load both modules: weights 32x256, inputs 256x8.
-    configure(1,2,1,3,0); // Shared K/L/Q=1/2/1; signed 8-bit, bias=0 per inner tile.
+    configure(1,2,1,3,0); // Shared K/L/Q=1/2/1; signed 8-bit, bias=0 once per output.
     start_job();
     wait_completion();
     check_idle();
@@ -354,7 +357,7 @@ module tb_dimc_top;
   task automatic test_5;
     begin_test(5,"Bias");
     fill_memory(1,2,1); // Load both modules: weights 32x256, inputs 256x8.
-    configure(1,2,1,0,-7); // Shared K/L/Q=1/2/1; unsigned 8-bit, bias=-7 per inner tile.
+    configure(1,2,1,0,-7); // Shared K/L/Q=1/2/1; unsigned 8-bit, bias=-7 once per output.
     start_job();
     wait_completion();
     check_idle();
@@ -365,7 +368,7 @@ module tb_dimc_top;
   task automatic test_6;
     begin_test(6,"Module 1 input channel stalled - module 2 continues");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     hold_input[0]=1; // Block module 1 input memory grants.
     start_job();
     wait_module_done(2); // Wait for module 2 to finish independently.
@@ -384,7 +387,7 @@ module tb_dimc_top;
   task automatic test_7;
     begin_test(7,"Module 1 weight channel stalled - module 2 continues");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     hold_weight[0]=1; // Block module 1 weight memory grants.
     start_job();
     wait_module_done(2); // Wait for module 2 to finish independently.
@@ -403,7 +406,7 @@ module tb_dimc_top;
   task automatic test_8;
     begin_test(8,"Module 1 output channel stalled - module 2 continues");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     hold_output[0]=1; // Block module 1 output memory grants.
     start_job();
     wait_module_done(2); // Wait for module 2 to finish independently.
@@ -422,7 +425,7 @@ module tb_dimc_top;
   task automatic test_9;
     begin_test(9,"Module 2 input channel stalled - module 1 continues");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     hold_input[1]=1; // Block module 2 input memory grants.
     start_job();
     wait_module_done(1); // Wait for module 1 to finish independently.
@@ -441,7 +444,7 @@ module tb_dimc_top;
   task automatic test_10;
     begin_test(10,"Module 2 weight channel stalled - module 1 continues");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     hold_weight[1]=1; // Block module 2 weight memory grants.
     start_job();
     wait_module_done(1); // Wait for module 1 to finish independently.
@@ -460,7 +463,7 @@ module tb_dimc_top;
   task automatic test_11;
     begin_test(11,"Module 2 output channel stalled - module 1 continues");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     hold_output[1]=1; // Block module 2 output memory grants.
     start_job();
     wait_module_done(1); // Wait for module 1 to finish independently.
@@ -479,7 +482,7 @@ module tb_dimc_top;
   task automatic test_12;
     begin_test(12,"Abort drains outstanding reads");
     fill_memory(4,3,2); // Load both modules: weights 128x384, inputs 384x16.
-    configure(4,3,2); // Shared K/L/Q=4/3/2; unsigned 8-bit, bias=0 per inner tile.
+    configure(4,3,2); // Shared K/L/Q=4/3/2; unsigned 8-bit, bias=0 once per output.
     response_delay=30; // Return memory read responses after 30 cycles.
     start_job();
     wait(i_dut.i_module_1.input_tcdm.req && i_dut.i_module_1.input_tcdm.gnt);
@@ -497,7 +500,7 @@ module tb_dimc_top;
   task automatic test_13;
     begin_test(13,"Abort drains module 1 stalled output burst");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     hold_output[0]=1; // Block module 1 output memory grants.
     start_job();
     wait_module_done(2); // Wait for module 2 to finish independently.
@@ -518,7 +521,7 @@ module tb_dimc_top;
   task automatic test_14;
     begin_test(14,"Abort drains module 2 stalled output burst");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     hold_output[1]=1; // Block module 2 output memory grants.
     start_job();
     wait_module_done(1); // Wait for module 1 to finish independently.
@@ -539,7 +542,7 @@ module tb_dimc_top;
   task automatic test_15;
     begin_test(15,"Restart after abort");
     fill_memory(4,3,2); // Load both modules: weights 128x384, inputs 384x16.
-    configure(4,3,2); // Shared K/L/Q=4/3/2; unsigned 8-bit, bias=0 per inner tile.
+    configure(4,3,2); // Shared K/L/Q=4/3/2; unsigned 8-bit, bias=0 once per output.
     response_delay=30; // Return memory read responses after 30 cycles.
     start_job();
     wait(i_dut.i_module_1.input_tcdm.req && i_dut.i_module_1.input_tcdm.gnt);
@@ -549,7 +552,7 @@ module tb_dimc_top;
     // No reset here: the replacement job must work after the abort itself.
     response_delay=2; // Return memory read responses after 2 cycles.
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     start_job();
     wait_completion();
     check_idle();
@@ -560,10 +563,10 @@ module tb_dimc_top;
   task automatic test_16;
     begin_test(16,"Queued jobs retain their own configuration");
     fill_memory(1,2,1); // Load both modules: weights 32x256, inputs 256x8.
-    configure(1,2,1,0,1); // Shared K/L/Q=1/2/1; unsigned 8-bit, bias=1 per inner tile.
+    configure(1,2,1,0,1); // Shared K/L/Q=1/2/1; unsigned 8-bit, bias=1 once per output.
     start_job();
     // Queue another context while the first job is still running.
-    configure(1,2,1,3,-9); // Shared K/L/Q=1/2/1; signed 8-bit, bias=-9 per inner tile.
+    configure(1,2,1,3,-9); // Shared K/L/Q=1/2/1; signed 8-bit, bias=-9 once per output.
     wr('h00,0); // Commit and trigger the queued job.
     wait_completion();
     check_results(1,1,"top_queued_first_golden.txt"); // Compare both 32x8 output matrices with their goldens.
@@ -576,7 +579,7 @@ module tb_dimc_top;
   task automatic test_17;
     begin_test(17,"Reject incompatible matrix dimensions");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     reg_write(DIMC_REG_INPUT_ROWS,256); // Input rows 256 differ from weight columns 128: invalid.
     start_job();
     wait_completion();
@@ -591,7 +594,7 @@ module tb_dimc_top;
   task automatic test_18;
     begin_test(18,"Reject module 1 unaligned address");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     reg_write(DIMC_REG_OUTPUT_ADDR,OBASE+1); // Misalign module 1 output base by one byte.
     start_job();
     wait_completion();
@@ -606,7 +609,7 @@ module tb_dimc_top;
   task automatic test_19;
     begin_test(19,"Reject module 2 unaligned address");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     reg_write(DIMC_REG_OUTPUT_ADDR_2,OBASE_2+1); // Misalign module 2 output base by one byte.
     start_job();
     wait_completion();
@@ -621,7 +624,7 @@ module tb_dimc_top;
   task automatic test_20;
     begin_test(20,"Reject module 1 address overflow");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     reg_write(DIMC_REG_KERNEL_ADDR,32'hffffffe0); // Module 1 weight region exceeds the 32-bit address space.
     start_job();
     wait_completion();
@@ -636,7 +639,7 @@ module tb_dimc_top;
   task automatic test_21;
     begin_test(21,"Reject module 2 address overflow");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     reg_write(DIMC_REG_KERNEL_ADDR_2,32'hffffffe0); // Module 2 weight region exceeds the 32-bit address space.
     start_job();
     wait_completion();
@@ -651,7 +654,7 @@ module tb_dimc_top;
   task automatic test_22;
     begin_test(22,"Reject unsupported compute mode");
     fill_memory(1,1,1); // Load both modules: weights 32x128, inputs 128x8.
-    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 per inner tile.
+    configure(1,1,1); // Shared K/L/Q=1/1/1; unsigned 8-bit, bias=0 once per output.
     reg_write(DIMC_REG_FORMAT,0); // Select unsupported mode 00 instead of 8-bit mode 11.
     start_job();
     wait_completion();
@@ -747,12 +750,91 @@ module tb_dimc_top;
     pass_test();
   endtask
 
+  task automatic test_26;
+    for (int sign_mode=1;sign_mode<=2;sign_mode++) begin
+      begin_test(26,"Mixed signed operands and one bias across three inner tiles");
+      fill_memory(1,3,1);
+      configure(1,3,1,sign_mode,sign_mode==1 ? -17 : 23);
+      stalls=1; response_delay=13;
+      start_job(); wait_completion(); check_idle();
+      check_results(1,1,sign_mode==1 ? "top_mixed_01_golden.txt" : "top_mixed_10_golden.txt");
+    end
+    pass_test();
+  endtask
+
+  task automatic test_27;
+    logic [255:0] mask=256'h0123456789abcdef13579bdf2468ace0fedcba98765432100f1e2d3c4b5a6978;
+    int compute_masks[4]='{5,257,512,1023};
+    for (int i=0;i<4;i++) begin
+      begin_test(27,"Write-mask registers and partial-byte compute masks");
+      // Reset macros begin at zero; disabled write bits must remain zero.
+      fill_memory(1,3,1); configure(1,3,1,0,-11);
+      reg_write(DIMC_REG_COMPUTE_MASK,compute_masks[i]);
+      for (int word_=0;word_<8;word_++)
+        reg_write(DIMC_REG_WRITE_MASK+word_,mask[word_*32 +:32]);
+      start_job(); wait_completion(); check_idle();
+      check_results(1,1,$sformatf("top_mask_%0d_golden.txt",compute_masks[i]));
+    end
+    pass_test();
+  endtask
+
+  task automatic test_28;
+    begin_test(28,"32-bit wraparound with bias added once");
+    fill_memory(1,3,1); configure(1,3,1,0,32'h7fffffff);
+    start_job(); wait_completion(); check_idle();
+    check_results(1,1,"top_wrap_golden.txt");
+    pass_test();
+  endtask
+
+  task automatic test_29;
+    for (int invalid=0;invalid<12;invalid++) begin
+      begin_test(29,$sformatf("Reject invalid job configuration %0d",invalid));
+      fill_memory(1,1,1); configure(1,1,1);
+      case(invalid)
+        0: reg_write(DIMC_REG_WEIGHT_ROWS,0);
+        1: reg_write(DIMC_REG_WEIGHT_COLS,0);
+        2: reg_write(DIMC_REG_INPUT_COLS,0);
+        3: reg_write(DIMC_REG_WEIGHT_ROWS,31);
+        4: reg_write(DIMC_REG_WEIGHT_COLS,127);
+        5: reg_write(DIMC_REG_INPUT_COLS,7);
+        6: reg_write(DIMC_REG_INPUT_ADDR,IBASE+1);
+        7: reg_write(DIMC_REG_INPUT_ADDR_2,IBASE_2+1);
+        8: reg_write(DIMC_REG_KERNEL_ADDR,WBASE+8);
+        9: reg_write(DIMC_REG_KERNEL_ADDR_2,WBASE_2+8);
+        10: reg_write(DIMC_REG_INPUT_ADDR,32'hfffffff8);
+        11: reg_write(DIMC_REG_OUTPUT_ADDR_2,32'hffffffe0);
+      endcase
+      start_job(); wait_completion();
+      access(1,'h18,0,status);
+      check_condition(!busy && status==2,"Invalid job did not report configuration error");
+      check_condition(input_count==0 && weight_count==0 && output_count==0 &&
+                      input_count_2==0 && weight_count_2==0 && output_count_2==0,
+                      "Rejected job issued memory transfers");
+    end
+    pass_test();
+  endtask
+
+  task automatic test_30;
+    int unsigned saved_input_1, saved_input_2;
+    begin_test(30,"Valid input bases aligned to eight bytes, not 32 bytes");
+    saved_input_1=IBASE; saved_input_2=IBASE_2;
+    // Use separate sparse-memory regions so guard initialization cannot
+    // overlap the relocated input tails.
+    IBASE=IBASE+'h100008; IBASE_2=IBASE_2+'h200018;
+    fill_memory(1,2,1); configure(1,2,1,0,-7);
+    stalls=1; response_delay=47;
+    start_job(); wait_completion(); check_idle();
+    check_results(1,1,"top_bias_golden.txt");
+    IBASE=saved_input_1; IBASE_2=saved_input_2;
+    pass_test();
+  endtask
+
   initial begin
     longint unsigned source_weights, source_inputs, source_outputs, next_base;
     periph.req=0; periph.add=0; periph.wen=1; periph.data=0;
     periph.be='1; periph.id=1;
     void'($value$plusargs("TEST=%d",selected_test));
-    check_condition(selected_test>=0 && selected_test<=25,"TEST must be 0 (all) or 1..25");
+    check_condition(selected_test>=0 && selected_test<=30,"TEST must be 0 (all) or 1..30");
     void'($value$plusargs("MATRIX_K=%d",matrix_k));
     void'($value$plusargs("MATRIX_L=%d",matrix_l));
     void'($value$plusargs("MATRIX_Q=%d",matrix_q));
@@ -823,6 +905,11 @@ module tb_dimc_top;
     if (selected_test==0 || selected_test==23) test_23();
     if (selected_test==0 || selected_test==24) test_24();
     if (selected_test==0 || selected_test==25) test_25();
+    if (selected_test==0 || selected_test==26) test_26();
+    if (selected_test==0 || selected_test==27) test_27();
+    if (selected_test==0 || selected_test==28) test_28();
+    if (selected_test==0 || selected_test==29) test_29();
+    if (selected_test==0 || selected_test==30) test_30();
     $display("[DIMC_TOP] RESULTS: %0d PASSED, 0 FAILED",passed);
     $display("[DIMC_TOP] ALL SELECTED TESTS PASSED");
     tests_passed=1;

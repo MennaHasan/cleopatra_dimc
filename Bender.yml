@@ -10,8 +10,13 @@ dependencies:
   hwpe-ctrl:    {git: "https://github.com/pulp-platform/hwpe-ctrl.git",   version: 3.0.2}
 
 sources:
-  - files:
+  - target: not(asic)
+    files:
       - rtl/spatz_dimc.sv
+  - target: asic
+    files:
+      - cleopatra_gf22/sourcecode/tc_clk.sv
+  - files:
       - rtl/spatz_dimc_dual.sv
       - rtl/dimc_package.sv
       - rtl/dimc_datapath.sv
@@ -23,6 +28,11 @@ sources:
       - rtl/accumulator.sv
       - rtl/cleopatra_ctrl.sv
       - rtl/cleopatra.sv
+
+  - target: asic
+    files:
+      - rtl/dimc_top_wrap_package.sv
+      - rtl/dimc_top_wrap.sv
 
   - target: tb
     files:

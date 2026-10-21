@@ -1,21 +1,9 @@
 .claude/
-.bender/
-transcript
-vsim.wlf
-etch*
 
 # Local scripts
-/scripts/
-
-# Generated simulation artefacts (bender binary, compiled libs, waveforms)
-sim/
-
-# Generated stimulus and golden-data files
-stimuli/**/*.txt
-
-# Python bytecode caches
-**/__pycache__/
-*.py[cod]
+/scripts/*
+!/scripts/run_sim.tcl
+!/scripts/run_top.tcl
 
 # Experiment artifacts; keep directories traversable for saved results/reports.
 /timing_analysis/experiments/**
@@ -30,3 +18,20 @@ stimuli/**/*.txt
 # Always track repository documentation
 !docs/
 !docs/**
+
+# Generated artifacts removed by make hw-clean
+/.bender/
+/sim/
+/modelsim.ini
+/transcript
+/*.wlf
+/*.vcd
+/*.ucdb
+/etch*
+/stimuli/**/*.txt
+/timing_analysis/timing_report_*.txt
+/timing_analysis/timing_report_*.csv
+/timing_analysis/timing_report_*.png
+__pycache__/
+*.pyc
+*.pyo

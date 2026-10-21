@@ -25,6 +25,7 @@ MODULE2_SEED ?= $(shell expr $(STIM_SEED) + 2)
 CLEO_TEST3_SEED ?= $(shell expr $(STIM_SEED) + 3)
 WORK_DIR    := $(SIM_DIR)/work
 COMPILE_TCL := $(SIM_DIR)/compile.tcl
+SIM_INI     := $(SIM_DIR)/modelsim.ini
 
 # ── Bender (package manager) ──────────────────────────────────
 BENDER_VERSION := 0.31.0
@@ -69,8 +70,12 @@ stim-top:
 	python3 $(STIM_DIR)/double_buffering_stim.py --k $(K) --l $(L) --q $(Q) --seed $(DOUBLE_BUFFERING_SEED) --outdir $(DOUBLE_BUFFERING_STIM_DIR)
 	python3 $(STIM_DIR)/double_buffering_stim.py --k $(K) --l $(L) --q $(Q) --seed $(MODULE2_SEED) --outdir $(MODULE2_STIM_DIR)
 
+# Generate simulator configuration from the installed Questa defaults.
+$(SIM_INI): | $(SIM_DIR)
+	cd "$(SIM_DIR)" && vmap -c
+
 # Compile the locked dependencies; update-ips remains an explicit update step.
-hw-compile: $(BENDER)
+hw-compile: $(BENDER) $(SIM_INI)
 	mkdir -p $(SIM_DIR)
 	$(BENDER) script vsim        \
 	    --vlog-arg="-sv"         \
@@ -78,7 +83,7 @@ hw-compile: $(BENDER)
 	    -t tb                    \
 	    > $(COMPILE_TCL)
 	test -d $(WORK_DIR) || vlib $(WORK_DIR)
-	vsim -c -do "onerror {quit -code 1}; vmap work $(WORK_DIR); if {[source $(COMPILE_TCL)] == 1} {quit -code 1}; quit -f"
+	vsim -modelsimini $(SIM_INI) -c -do "onerror {quit -code 1}; vmap work $(abspath $(WORK_DIR)); if {[source $(COMPILE_TCL)] == 1} {quit -code 1}; quit -f"
 
 # ── Run simulations ───────────────────────────────────────────
 # Use GUI=1 to open the QuestaSim GUI instead of batch mode
@@ -86,15 +91,15 @@ hw-compile: $(BENDER)
 GUI ?= 0
 TOP_TEST ?= 0
 ifeq ($(GUI),1)
-VSIM_FLAGS = -voptargs=+acc
+VSIM_FLAGS = -modelsimini $(SIM_INI) -voptargs=+acc
 VSIM_DO    = "run -all"
 VSIM_TOP_DO = $(VSIM_DO)
 VSIM_TOP_FLAGS = $(VSIM_FLAGS)
 else
-VSIM_FLAGS = -c 
+VSIM_FLAGS = -modelsimini $(SIM_INI) -c -voptargs=+acc
 VSIM_DO    = "do scripts/run_sim.tcl"
 VSIM_TOP_DO = "do scripts/run_top.tcl"
-VSIM_TOP_FLAGS = -c -voptargs=+acc
+VSIM_TOP_FLAGS = -modelsimini $(SIM_INI) -c -voptargs=+acc
 endif
 
 sim-dual: stim hw-compile
@@ -123,15 +128,14 @@ sim-cleopatra: stim hw-compile
 	fi
 
 # ── Remove all generated artefacts ────────────────────────────
+# Preserve sources/configuration and the complete experiment archive.
+# Do not traverse the separate GF22 flow or version-control directories.
 hw-clean:
-	rm -rf $(WORK_DIR)
-	rm -f  $(COMPILE_TCL) $(SIM_DIR)/transcript $(SIM_DIR)/*.vcd
-	rm -f  transcript vsim.wlf *.vcd
-	rm -f  $(DIMC_STIM_DIR)/*.txt
-	rm -f  $(CLEO_TEST1_STIM_DIR)/*.txt
-	rm -f  $(CLEO_TEST2_STIM_DIR)/*.txt
-	rm -f  $(CLEO_TEST3_STIM_DIR)/*.txt
-	rm -f  $(DOUBLE_BUFFERING_STIM_DIR)/*.txt
-	rm -f  $(MODULE2_STIM_DIR)/*.txt
-	rm -rf $(DIMC_STIM_DIR)/__pycache__
-	rm -f  etch*
+	rm -rf -- "$(SIM_DIR)" .bender
+	rm -f -- modelsim.ini transcript *.wlf *.vcd *.ucdb etch*
+	find "$(STIM_DIR)" -type f -name '*.txt' -delete
+	find timing_analysis -maxdepth 1 -type f \( -name 'timing_report_*.txt' -o -name 'timing_report_*.csv' -o -name 'timing_report_*.png' \) -delete
+	find . \( -name .git -o -name cleopatra_gf22 -o -path './timing_analysis/experiments' \) -prune \
+	    -o -type d -name __pycache__ -prune -exec rm -rf -- {} + \
+	    -o -type f \( -name '*.pyc' -o -name '*.pyo' \) -exec rm -f -- {} +
+	find "$(STIM_DIR)" -depth -mindepth 1 -type d -empty -delete

@@ -5,12 +5,8 @@
 !/scripts/run_sim.tcl
 !/scripts/run_top.tcl
 
-# Experiment artifacts; keep directories traversable for saved results/reports.
-/timing_analysis/experiments/**
-!/timing_analysis/experiments/**/
-!/timing_analysis/experiments/**/results.csv
-!/timing_analysis/experiments/**/results.png
-!/timing_analysis/experiments/**/timing_report_*.txt
+# Previous experiment archive is entirely local.
+/timing_analysis/experiments/
 
 # Assistant-added supporting documentation, not requested project deliverables.
 /timing_analysis/EXPERIMENTS.md

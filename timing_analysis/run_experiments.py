@@ -143,7 +143,7 @@ def main():
         if shutil.which(tool) is None:
             parser.error("{} is not on PATH; run in your Questa/Bender environment".format(tool))
     # Unique output root prevents old results/reports from being reused.
-    output = args.output_dir or ROOT / "timing_analysis" / "experiments" / datetime.now().strftime("run_%Y%m%d_%H%M%S_%f")
+    output = args.output_dir or ROOT / "timing_analysis" / "results" / datetime.now().strftime("run_%Y%m%d_%H%M%S_%f")
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     csv_path = output / "results.csv"

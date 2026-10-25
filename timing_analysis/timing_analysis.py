@@ -193,10 +193,15 @@ def plot_summary(path, summary):
             cell.set_text_props(color="white", weight="bold")
     fig.text(.06, .275, "Macro capacity: weights = 32 rows × 1024 bits; input vector = {:,} bits".format(
         summary["vector_region"]), fontsize=11)
-    theoretical = 32768 / 420
-    fig.text(.06, .235, "MAC comparison — single macro model, 8 vectors, 8-bit operands", fontsize=14, weight="bold")
-    fig.text(.06, .200, "MACs = 32 × 128 × 8 = 32,768     |     Cycles = 128 + 8 × (4 + 32) + 4 = 420", fontsize=12)
-    fig.text(.06, .165, "Theoretical MACs/cycle = 32,768 / 420 = {:.2f}".format(theoretical), fontsize=14, color="#17324D")
+    inner_elements = summary["vector_region"] // summary["precision"]
+    model_macs = 32 * inner_elements * 8
+    theoretical = model_macs / 420
+    fig.text(.06, .235, "MAC comparison — single macro model, 8 vectors, {}-bit operands".format(
+        summary["precision"]), fontsize=14, weight="bold")
+    fig.text(.06, .200, "MACs = 32 × {} × 8 = {:,}     |     Cycles = 128 + 8 × (4 + 32) + 4 = 420".format(
+        inner_elements, model_macs), fontsize=12)
+    fig.text(.06, .165, "Theoretical MACs/cycle = {:,} / 420 = {:.2f}".format(
+        model_macs, theoretical), fontsize=14, color="#17324D")
     comparisons = ["Module {}: {:.2f} measured / {:.2f} model = {:.2f}×".format(
         m, summary["macs"][m] / cycles, theoretical, summary["macs"][m] / cycles / theoretical)
         for m in modules]

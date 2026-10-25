@@ -133,7 +133,7 @@ always_comb begin
     comp_result = 0;
 
     case (pipeline_mode[1])
-        // 1-bit Mode: XNOR + Popcount
+        // 1-bit Mode: unsigned 0/1 dot product 
         2'b00: begin
             for (int i = 0; i < ROW_WIDTH; i++) begin
                 comp_result +=

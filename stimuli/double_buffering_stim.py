@@ -11,7 +11,8 @@ K = 4
 L = 3
 Q = 2
 
-# DIMC tile dimensions. N is represented here in unsigned 8-bit elements.
+# Packed storage tile dimensions. Matrices below contain bytes; a byte holds
+# 8/precision unsigned scalar elements (or one signed/unsigned 8-bit element).
 M = 32
 N_BITS = 1024
 P = 8
@@ -104,10 +105,26 @@ def calculate_top_golden(
     weights: Matrix, inputs: Matrix, nk: int, nl: int, nq: int,
     sign_mode: int = 0, bias: int = 0,
     compute_mask: int = 0, write_mask: int = (1 << 256) - 1,
+    precision: int = 8,
 ) -> Matrix:
-    """Compute W @ X + bias, modulo 2**32; masked writes assume cleared macros."""
+    """Dot products over precision-bit lanes in byte matrices, modulo 2**32.
+
+    Inner dimensions are packed bytes. 1/2/4-bit lanes are always unsigned;
+    sign_mode affects 8-bit lanes only. Masks apply before lane extraction.
+    """
+    if precision not in (1, 2, 4, 8):
+        raise ValueError("precision must be 1, 2, 4, or 8")
     def operand(value: int, signed: bool) -> int:
         return value - 256 if signed and value >= 128 else value
+
+    def packed_product(weight_byte: int, input_byte: int) -> int:
+        if precision == 8:
+            return (operand(weight_byte, bool(sign_mode & 1))
+                    * operand(input_byte, bool(sign_mode & 2)))
+        lane_mask = (1 << precision) - 1
+        return sum(((weight_byte >> bit) & lane_mask)
+                   * ((input_byte >> bit) & lane_mask)
+                   for bit in range(0, 8, precision))
 
     # Each memory section is byte-reversed on its way into the macro.
     # Sections 0..3 occupy increasing 256-bit positions in its 1024-bit row.
@@ -122,8 +139,7 @@ def calculate_top_golden(
     return [
         [
             (sum(
-                operand(weights[r][n] & masks[n][0], bool(sign_mode & 1))
-                * operand(inputs[n][c] & masks[n][1], bool(sign_mode & 2))
+                packed_product(weights[r][n] & masks[n][0], inputs[n][c] & masks[n][1])
                 for n in range(nl * N_ELEMENTS)
             ) + bias) & UINT32_MASK
             for c in range(nq * P)
@@ -178,8 +194,10 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=43)
     parser.add_argument("--outdir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--k", type=int, default=K, help="Kernel row tiles (32 rows each)")
-    parser.add_argument("--l", type=int, default=L, help="Inner tiles (128 elements each)")
+    parser.add_argument("--l", type=int, default=L, help="Inner tiles (128 packed bytes each; 1024/precision elements)")
     parser.add_argument("--q", type=int, default=Q, help="Input column tiles (8 columns each)")
+    parser.add_argument("--precision", type=int, choices=(1, 2, 4, 8), default=8,
+                        help="Precision for the full Test 1 golden (default: 8)")
     parser.add_argument(
         "--untile-only",
         action="store_true",
@@ -240,6 +258,21 @@ def main() -> None:
         args.outdir / "double_buffering_golden_matmul_output.txt",
         calculate_top_golden(kernel_stim, feature_stim, args.k, args.l, args.q, bias=BIAS),
     )
+
+    # Preserve the existing 8-bit golden for legacy tests. A lower-precision
+    # Test 1 reuses exactly the same packed bytes with a precision-specific golden.
+    if args.precision != 8:
+        write_matrix(args.outdir / f"double_buffering_golden_matmul_output_{args.precision}bit.txt",
+                     calculate_top_golden(kernel_stim, feature_stim, args.k, args.l, args.q,
+                                          bias=BIAS, precision=args.precision))
+
+    # Test 31: lower precisions, multiple inner/output tiles, and unsigned
+    # semantics even when both 8-bit sign-control bits are set.
+    if args.k >= 2 and args.l >= 3 and args.q >= 2:
+        for precision in (1, 2, 4):
+            write_matrix(args.outdir / f"top_precision_{precision}bit_golden.txt",
+                         calculate_top_golden(kernel_stim, feature_stim, 2, 3, 2,
+                                              sign_mode=3, bias=-7, precision=precision))
 
     # Separate compact goldens keep tb_dimc_top focused on driving/checking.
     # Each specification is (K, L, Q, sign_mode, bias).

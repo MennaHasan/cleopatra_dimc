@@ -32,7 +32,7 @@ module tb_dimc_test1_timing
   initial begin
     void'($value$plusargs("TIMING_REPORT_DIR=%s",report_dir));
   end
-  longint unsigned total_macs;
+  longint unsigned total_macs, inner_elements;
   int precision_bits;
   int minimum_macs=0;
   bit quiet_timing=0, summary_timing=0;
@@ -183,7 +183,9 @@ module tb_dimc_test1_timing
       // Freeze the measured cycle at the final grant, but publish only after
       // the TB has checked every result and the public completion status.
       if (done_o && verified_i && !report_written) begin
-        total_macs=64'(config_i.weight_rows)*64'(config_i.weight_cols)*64'(config_i.input_cols);
+        precision_bits=1 << config_i.mode;
+        inner_elements=64'(config_i.weight_cols)*(8/precision_bits);
+        total_macs=64'(config_i.weight_rows)*inner_elements*64'(config_i.input_cols);
         assert (minimum_macs==0 || total_macs>=64'(minimum_macs)*cycle)
           else $fatal(1,"Throughput regression: %0f MACs/cycle, required %0d",real'(total_macs)/cycle,minimum_macs);
         // Choose a free report number to preserve past reports and analyses.
@@ -208,31 +210,32 @@ module tb_dimc_test1_timing
         $fdisplay(report_file,"Signing used: weights=%s; inputs=%s",
                   (config_i.mode==2'b11 && config_i.sign_8b[0]) ? "signed" : "unsigned",
                   (config_i.mode==2'b11 && config_i.sign_8b[1]) ? "signed" : "unsigned");
+        $fdisplay(report_file,"Packed inner dimension: %0d bytes per row/vector",config_i.weight_cols);
         $fdisplay(report_file,"Macro weights region: 32 rows x 1024 bits");
         $fdisplay(report_file,"Macro input vector region: 1024 bits");
         $fdisplay(report_file,"Matrix sizes for each module (rows x columns):");
         for (int m=0;m<2;m++) begin
           $fdisplay(report_file,"  Module %0d:",m+1);
           $fdisplay(report_file,"    Input:  %0d x %0d = %0d elements; %0d bits/element",
-                    config_i.input_rows,config_i.input_cols,
-                    config_i.input_rows*config_i.input_cols,precision_bits);
+                    inner_elements,config_i.input_cols,
+                    inner_elements*config_i.input_cols,precision_bits);
           $fdisplay(report_file,"    Kernel: %0d x %0d = %0d elements; %0d bits/element",
-                    config_i.weight_rows,config_i.weight_cols,
-                    config_i.weight_rows*config_i.weight_cols,precision_bits);
+                    config_i.weight_rows,inner_elements,
+                    64'(config_i.weight_rows)*inner_elements,precision_bits);
           $fdisplay(report_file,"    Output: %0d x %0d = %0d elements; 32 bits/element",
                     config_i.weight_rows,config_i.input_cols,
                     config_i.weight_rows*config_i.input_cols);
           $fdisplay(report_file,"    Weight matrix tiles (capacity): %0d bits / 32768 bits = %0.4f tiles",
-                    config_i.weight_rows*config_i.weight_cols*precision_bits,
-                    real'(config_i.weight_rows*config_i.weight_cols*precision_bits)/32768.0);
+                    64'(config_i.weight_rows)*64'(config_i.weight_cols)*8,
+                    real'(64'(config_i.weight_rows)*64'(config_i.weight_cols)*8)/32768.0);
         end
         // Both modules have the same dimensions; report each independently.
-        total_macs=64'd1*config_i.weight_rows*config_i.weight_cols*config_i.input_cols;
+        total_macs=64'(config_i.weight_rows)*inner_elements*64'(config_i.input_cols);
         $fdisplay(report_file,"\nThroughput per module (including loading and output writes):");
         for (int m=0;m<2;m++) begin
         $fdisplay(report_file,"  Module %0d:",m+1);
         $fdisplay(report_file,"    Total MACs = %0d output rows x %0d inner elements x %0d output columns = %0d MACs",
-                  config_i.weight_rows,config_i.weight_cols,config_i.input_cols,total_macs);
+                  config_i.weight_rows,inner_elements,config_i.input_cols,total_macs);
         $fdisplay(report_file,"    Total MACs/cycle = %0d MACs / %0d elapsed cycles = %0.4f MACs/cycle",
                   total_macs,cycle,real'(total_macs)/real'(cycle));
         end

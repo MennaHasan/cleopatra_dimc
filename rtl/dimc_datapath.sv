@@ -5,9 +5,11 @@
  * One start command launches a job, which can require many tile products.
  * The hardware size stays fixed while the matrix dimensions change per job.
  *
- * With 8-bit elements:
- *   Weights: (K*32) rows x (L*128) columns
- *   Inputs:  (L*128) rows x (Q*8) columns
+ * At B=1/2/4/8 bits, each inner tile contains N=1024/B scalar elements.
+ *   Weights: (K*32) rows x (L*N) elements
+ *   Inputs:  (L*N) elements x (Q*8) columns
+ * The weight_cols_i/input_rows_i registers hold L*128 PACKED BYTES,
+ * not scalar inner elements. Transfers and tile counts do not depend on B.
  *   Result:  (K*32) rows x (Q*8) columns
  * K, L and Q are tile COUNTS; k, l and q are zero-based tile INDICES.
  * For one output tile [k][q], the hardware computes:
@@ -38,7 +40,8 @@ module dimc_datapath
   input  logic                 rst_ni,
   input  logic                 clear_i,
 
-  // Start a job and latch its matrix dimensions (in elements) and configuration.
+  // Start a job and latch configuration. Outer dimensions are scalar counts;
+  // weight_cols_i/input_rows_i are packed-byte inner dimensions.
   // Pulse start_i for one clock when idle (ready_o is low). These inputs are sampled
   // once, so the controller may change them after the command is accepted.
   // clear_i aborts a job; it is different from clearing one completed tile.
@@ -141,13 +144,13 @@ module dimc_datapath
     end
   end
 
-  // Low-bit checks implement divisibility by powers of two (32, 128, 8).
+  // Complete tiles: 32 output rows, 128 packed inner bytes, 8 output columns.
   // There is no partial-tile padding for now. 
   // Invalid starts remain in IDLE.
   assign valid_config = weight_rows_i != 0 && weight_cols_i != 0 &&
                         input_cols_i != 0 && weight_cols_i == input_rows_i &&
                         weight_rows_i[4:0] == 0 && weight_cols_i[6:0] == 0 &&
-                        input_cols_i[2:0] == 0 && mode_i == 2'b11;
+                        input_cols_i[2:0] == 0;
   // Another tile product exists unless ALL three indices are at their ends.
   // On the final product, do not request data for a nonexistent next tile.
   assign has_next = (l_q != l_size_q-1) || (q_q != q_size_q-1) ||
@@ -411,7 +414,7 @@ module dimc_datapath
   end
   always @(posedge clk_i) begin
     if (core_rst_n && state_q == IDLE && start_i)
-      assert (valid_config) else $error("Invalid dimensions or mode: complete 8-bit tiles required");
+      assert (valid_config) else $error("Invalid dimensions: require 32 rows, 128 packed inner bytes, and 8 columns per tile");
   end
   // synthesis translate_on
 endmodule

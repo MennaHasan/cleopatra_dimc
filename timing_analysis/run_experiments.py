@@ -34,7 +34,7 @@ from timing_analysis import read_summary
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FIELDS = ("k", "l", "q", "module_1_seed", "module_2_seed",
+FIELDS = ("k", "l", "q", "precision", "module_1_seed", "module_2_seed",
           "macs_per_module", "elapsed_cycles", "report")
 
 
@@ -47,18 +47,20 @@ def execute(command, log):
         raise RuntimeError("Command failed (exit {}); inspect {}".format(result.returncode, log))
 
 
-def collect_result(report, k, l, q, seeds):
+def collect_result(report, k, l, q, seeds, precision=8):
     summary = read_summary(report)
-    expected = (k * 32) * (l * 128) * (q * 8)
+    inner_elements = l * (1024 // precision)
+    expected = (k * 32) * inner_elements * (q * 8)
     for module in (1, 2):
         sizes = summary["modules"].get(module, {})
         if ("Kernel" not in sizes or "Input" not in sizes or "Output" not in sizes
-                or sizes["Kernel"][:2] != (k * 32, l * 128)
-                or sizes["Input"][:2] != (l * 128, q * 8)
+                or sizes["Kernel"][:2] != (k * 32, inner_elements)
+                or sizes["Input"][:2] != (inner_elements, q * 8)
                 or sizes["Output"][:2] != (k * 32, q * 8)
+                or sizes["Kernel"][3] != precision or sizes["Input"][3] != precision
                 or summary["macs"][module] != expected):
             raise ValueError("Report dimensions/MACs do not match this experiment: {}".format(report))
-    return dict(zip(FIELDS, (k, l, q, seeds[0], seeds[1], expected,
+    return dict(zip(FIELDS, (k, l, q, precision, seeds[0], seeds[1], expected,
                             summary["cycles"], str(report))))
 
 
@@ -216,6 +218,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for dimension in ("k", "l", "q"):
         parser.add_argument("--" + dimension, type=int, help="Single-run tile count; supply all three")
+    parser.add_argument("--precision", type=int, choices=(1, 2, 4, 8), default=8,
+                        help="Operand precision for all experiments (default: 8)")
     parser.add_argument("--seed", type=int, help="Reproduce stimulus seeds; otherwise random")
     parser.add_argument("--output-dir", type=Path, help="New directory for logs, reports and stimuli; CSV/plots go in timing_analysis/results")
     parser.add_argument("--skip-compile", action="store_true", help="Use an already compiled sim/work library")
@@ -287,17 +291,18 @@ def main():
                 for module, seed in enumerate(seeds, 1):
                     stim = experiment / "module_{}".format(module)
                     execute([sys.executable, str(ROOT / "stimuli/double_buffering_stim.py"),
-                             "--k", str(k), "--l", str(l), "--q", str(q), "--seed", str(seed),
+                             "--k", str(k), "--l", str(l), "--q", str(q), "--precision", str(args.precision), "--seed", str(seed),
                              "--outdir", str(stim)], experiment / "stimulus_{}.log".format(module))
                 execute(["vsim", "-c", "-voptargs=+acc", "-l", str(experiment / "simulation.log"),
                          "-lib", "sim/work", "tb_dimc_top", "+TEST=1", "+MATRIX_K={}".format(k),
                          "+MATRIX_L={}".format(l), "+MATRIX_Q={}".format(q),
+                         "+PRECISION={}".format(args.precision),
                          "+STIM_DIR_1={}".format(experiment / "module_1"),
                          "+STIM_DIR_2={}".format(experiment / "module_2"),
                          "+TIMING_REPORT_DIR={}".format(experiment),
                          "-do", "do scripts/run_top.tcl"], experiment / "simulation.stdout")
                 report = experiment / "timing_report_1.txt"
-                row = collect_result(report, k, l, q, seeds)
+                row = collect_result(report, k, l, q, seeds, args.precision)
                 writer.writerow(row)
                 destination.flush()
                 print("Completed: {:,} MACs/module; {:,} cycles; {:.4f} MACs/cycle/module".format(

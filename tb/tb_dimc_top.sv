@@ -103,6 +103,7 @@ module tb_dimc_top;
   logic [31:0] status;
   int selected_test=0, test_number=0, passed=0;
   int matrix_k=6, matrix_l=7, matrix_q=5; // Source file tile counts; test 1 uses the full matrices.
+  int matrix_precision=8; // Test 1 precision; other tests select their own modes.
   bit tests_passed=0;
   longint unsigned watchdog_cycles=500000;
   string test_name="initialization";
@@ -198,7 +199,7 @@ module tb_dimc_top;
   task automatic reg_write(input int reg_index, input logic [31:0] data);
     wr(DIMC_IO_BASE+4*reg_index,data);
   endtask
-  task automatic configure(input int nk,nl,nq, input int sign_mode=0, bias=0);
+  task automatic configure(input int nk,nl,nq, input int sign_mode=0, bias=0, mode_=3);
     logic [31:0] acquired;
     access(1,'h04,0,acquired);
     check_condition(!acquired[31],"Cannot acquire HWPE context");
@@ -209,10 +210,11 @@ module tb_dimc_top;
     reg_write(DIMC_REG_KERNEL_ADDR_2,WBASE_2);
     reg_write(DIMC_REG_OUTPUT_ADDR_2,OBASE_2);
     reg_write(DIMC_REG_WEIGHT_ROWS,nk*32);
+    // Inner registers are packed BYTES at every precision, not element counts.
     reg_write(DIMC_REG_WEIGHT_COLS,nl*128);
     reg_write(DIMC_REG_INPUT_ROWS,nl*128);
     reg_write(DIMC_REG_INPUT_COLS,nq*8);
-    reg_write(DIMC_REG_FORMAT,3 | (sign_mode<<2));
+    reg_write(DIMC_REG_FORMAT,mode_ | (sign_mode<<2));
     reg_write(DIMC_REG_BIAS,bias);
     reg_write(DIMC_REG_COMPUTE_MASK,0);
     for (int i=0;i<8;i++) reg_write(DIMC_REG_WRITE_MASK+i,'1);
@@ -309,11 +311,14 @@ module tb_dimc_top;
   task automatic test_1;
     begin_test(1,"Full matrix multiplication - both modules expected to match golden results");
     fill_memory(matrix_k,matrix_l,matrix_q); // Load both modules' complete matrices from files.
-    configure(matrix_k,matrix_l,matrix_q,0,0); // Shared dimensions; unsigned 8-bit, zero bias.
+    configure(matrix_k,matrix_l,matrix_q,0,0,$clog2(matrix_precision)); // Unsigned selected precision, zero bias.
     start_job();
     wait_completion();
     check_idle();
-    check_results(matrix_k,matrix_q,"double_buffering_golden_matmul_output.txt"); // Compare every output element in both modules.
+    if (matrix_precision==8)
+      check_results(matrix_k,matrix_q,"double_buffering_golden_matmul_output.txt");
+    else
+      check_results(matrix_k,matrix_q,$sformatf("double_buffering_golden_matmul_output_%0dbit.txt",matrix_precision));
     check_condition(test1_timing_done,"Test 1 timing did not reach both final output writes");
     test1_verified=1;
     @(negedge clk); // Allow the observer to publish the verified report.
@@ -814,16 +819,34 @@ module tb_dimc_top;
     pass_test();
   endtask
 
+  // One numbered test covers all three unsigned lower-precision modes.
+  // The same packed bytes exercise K/Q strides and accumulation across L=3.
+  task automatic test_31;
+    for (int mode_=0;mode_<3;mode_++) begin
+      begin_test(31,$sformatf("Unsigned %0d-bit packed operands, both modules",1<<mode_));
+      fill_memory(2,3,2);
+      // Set both sign bits deliberately: only 8-bit mode may interpret them.
+      configure(2,3,2,3,-7,mode_);
+      stalls=1; response_delay=13;
+      start_job(); wait_completion(); check_idle();
+      check_results(2,2,$sformatf("top_precision_%0dbit_golden.txt",1<<mode_));
+    end
+    pass_test();
+  endtask
+
   initial begin
     longint unsigned source_weights, source_inputs, source_outputs, next_base;
     periph.req=0; periph.add=0; periph.wen=1; periph.data=0;
     periph.be='1; periph.id=1;
     void'($value$plusargs("TEST=%d",selected_test));
-    check_condition(selected_test>=0 && selected_test<=30 && selected_test!=22,
-                    "TEST must be 0 (all), 1..21, or 23..30");
+    check_condition(selected_test>=0 && selected_test<=31 && selected_test!=22,
+                    "TEST must be 0 (all), 1..21, or 23..31");
     void'($value$plusargs("MATRIX_K=%d",matrix_k));
     void'($value$plusargs("MATRIX_L=%d",matrix_l));
     void'($value$plusargs("MATRIX_Q=%d",matrix_q));
+    void'($value$plusargs("PRECISION=%d",matrix_precision));
+    check_condition(matrix_precision==1 || matrix_precision==2 || matrix_precision==4 || matrix_precision==8,
+                    "PRECISION must be 1, 2, 4, or 8");
     check_condition(matrix_k>=1 && matrix_l>=1 && matrix_q>=1,
                     "MATRIX_K, MATRIX_L and MATRIX_Q must be positive");
     // Check in wide arithmetic before allocation or 32-bit address conversion.
@@ -895,6 +918,7 @@ module tb_dimc_top;
     if (selected_test==0 || selected_test==28) test_28();
     if (selected_test==0 || selected_test==29) test_29();
     if (selected_test==0 || selected_test==30) test_30();
+    if (selected_test==0 || selected_test==31) test_31();
     $display("[DIMC_TOP] RESULTS: %0d PASSED, 0 FAILED",passed);
     $display("[DIMC_TOP] ALL SELECTED TESTS PASSED");
     tests_passed=1;

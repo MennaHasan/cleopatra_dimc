@@ -79,10 +79,12 @@ module dimc_ctrl
                         66'(programmed.input_rows)*66'(programmed.input_cols);
   assign output_end_2 = 66'(programmed.output_addr_2) +
                          66'(programmed.weight_rows)*66'(programmed.input_cols)*66'd4;
+  // Inner dimensions are packed byte counts for every mode; one inner tile
+  // occupies 128 bytes regardless of precision. All four 2-bit modes are valid.
   assign valid_config = programmed.weight_rows != 0 && programmed.weight_cols != 0 &&
       programmed.input_cols != 0 && programmed.weight_cols == programmed.input_rows &&
       programmed.weight_rows[4:0] == 0 && programmed.weight_cols[6:0] == 0 &&
-      programmed.input_cols[2:0] == 0 && programmed.mode == 2'b11 &&
+      programmed.input_cols[2:0] == 0 &&
       programmed.input_addr[2:0] == 0 && programmed.kernel_addr[4:0] == 0 &&
       programmed.output_addr[4:0] == 0 &&
       programmed.input_addr_2[2:0] == 0 && programmed.kernel_addr_2[4:0] == 0 &&

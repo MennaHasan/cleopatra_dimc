@@ -17,6 +17,8 @@ MODULE2_STIM_DIR := $(STIM_DIR)/double_buffering_module2
 K ?= 4
 L ?= 3
 Q ?= 2
+# Test 1 operand precision; inner dimensions remain packed-byte counts.
+PRECISION ?= 8
 # Keep the single-macro and Cleopatra 1/2 generators on the same seed: they
 # share kernel_weights.txt. Other datasets use independent reproducible seeds.
 STIM_SEED ?= 42
@@ -67,8 +69,8 @@ stim:
 
 # ── Compile RTL + TBs ─────────────────────────────────────────
 stim-top:
-	python3 $(STIM_DIR)/double_buffering_stim.py --k $(K) --l $(L) --q $(Q) --seed $(DOUBLE_BUFFERING_SEED) --outdir $(DOUBLE_BUFFERING_STIM_DIR)
-	python3 $(STIM_DIR)/double_buffering_stim.py --k $(K) --l $(L) --q $(Q) --seed $(MODULE2_SEED) --outdir $(MODULE2_STIM_DIR)
+	python3 $(STIM_DIR)/double_buffering_stim.py --k $(K) --l $(L) --q $(Q) --precision $(PRECISION) --seed $(DOUBLE_BUFFERING_SEED) --outdir $(DOUBLE_BUFFERING_STIM_DIR)
+	python3 $(STIM_DIR)/double_buffering_stim.py --k $(K) --l $(L) --q $(Q) --precision $(PRECISION) --seed $(MODULE2_SEED) --outdir $(MODULE2_STIM_DIR)
 
 # Generate simulator configuration from the installed Questa defaults.
 $(SIM_INI): | $(SIM_DIR)
@@ -117,7 +119,7 @@ sim-datapath: stim hw-compile
 	vsim $(VSIM_FLAGS) -l $(SIM_DIR)/transcript -lib $(WORK_DIR) tb_dimc_datapath -do $(VSIM_DO)
 
 sim-top: stim-top hw-compile
-	vsim $(VSIM_TOP_FLAGS) -l $(SIM_DIR)/transcript -lib $(WORK_DIR) tb_dimc_top +TEST=$(TOP_TEST) +MATRIX_K=$(K) +MATRIX_L=$(L) +MATRIX_Q=$(Q) -do $(VSIM_TOP_DO)
+	vsim $(VSIM_TOP_FLAGS) -l $(SIM_DIR)/transcript -lib $(WORK_DIR) tb_dimc_top +TEST=$(TOP_TEST) +MATRIX_K=$(K) +MATRIX_L=$(L) +MATRIX_Q=$(Q) +PRECISION=$(PRECISION) -do $(VSIM_TOP_DO)
 
 sim-cleopatra: stim hw-compile
 	rm -f $(CLEO_TEST3_STIM_DIR)/test3_accumulator_output.txt

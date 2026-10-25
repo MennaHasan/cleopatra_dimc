@@ -1,14 +1,27 @@
 """Run independent Test 1 experiments and collect per-module MACs and cycles.
 
-Default: 89 experiments: all 64 combinations of K, L, Q from 1 to 4,
-and 25 distinct random mixed combinations from 5 to 30.
-K=L=Q=1 appears once. Equal triples are excluded only from the random sweep.
+Default: 58 distinct experiments across three controlled sweeps:
+Q=1..20 with K=L=1; L=1..20 with K=Q=1; K=1..20 with L=Q=1.
+The shared K=L=Q=1 baseline is run once.
 Use --k K --l L --q Q for a single custom experiment.
 Dimensions are passed at runtime; source defaults are never rewritten.
+
+Run experiments and produce all plots:
+    python3 timing_analysis/run_experiments.py
+Analyze the existing timing_analysis/results/results.csv without simulation:
+    python3 timing_analysis/run_experiments.py --plot-only
+Analyze a different saved CSV:
+    python3 timing_analysis/run_experiments.py --plot-only path/to/results.csv
+
+Both modes produce four PNGs: K, L and Q versus MACs/cycle with the other
+two dimensions fixed at 1, plus a K × L × Q versus MACs/cycle comparison.
+New runs write results.csv and these PNGs directly in timing_analysis/results/;
+logs, timing reports and stimuli go in timing_analysis/run_<id>/ beside results/.
 """
 
 import argparse
 import csv
+from collections import defaultdict
 import random
 import shlex
 import shutil
@@ -49,63 +62,175 @@ def collect_result(report, k, l, q, seeds):
                             summary["cycles"], str(report))))
 
 
-def plot_results(csv_path, output, max_size=None):
+def plot_paths(output):
+    """Names of the four requested throughput plots."""
+    output = Path(output)
+    names = ("k", "l", "q", "klq")
+    return tuple(output.with_name(output.stem + "_{}_vs_macs_per_cycle.png".format(name))
+                 for name in names)
+
+
+def plot_results(csv_path, output):
+    """Generate the four controlled-sweep throughput plots from a saved CSV."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from matplotlib.ticker import MaxNLocator
 
-    with Path(csv_path).open() as source:
-        rows = list(csv.DictReader(source))
-    if max_size is not None:
-        rows = [row for row in rows
-                if 0 <= int(row["k"]) * int(row["l"]) * int(row["q"]) <= max_size]
+    with Path(csv_path).open(newline="") as source:
+        reader = csv.DictReader(source)
+        required = {"k", "l", "q", "macs_per_module", "elapsed_cycles"}
+        missing = required.difference(reader.fieldnames or [])
+        if missing:
+            raise ValueError("Missing CSV columns: {}".format(", ".join(sorted(missing))))
+        rows = []
+        for line_number, row in enumerate(reader, 2):
+            try:
+                values = {field: int(row[field]) for field in required}
+            except (ValueError, TypeError) as error:
+                raise ValueError("Invalid numeric data on CSV line {}".format(line_number)) from error
+            if any(value <= 0 for value in values.values()):
+                raise ValueError("Dimensions, MACs and cycles must be positive on CSV line {}".format(line_number))
+            rows.append(values)
     if not rows:
-        raise ValueError("No completed experiments in {}".format(csv_path))
-    rows.sort(key=lambda row: int(row["k"]) * int(row["l"]) * int(row["q"]))
-    sizes = [int(row["k"]) * int(row["l"]) * int(row["q"]) for row in rows]
-    macs = [int(row["macs_per_module"]) for row in rows]
-    cycles = [int(row["elapsed_cycles"]) for row in rows]
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-    axes[0].plot(sizes, cycles, "o-", color="#2374AB")
-    axes[0].set_xlabel("Matrix size (K × L × Q)")
-    axes[0].set_ylabel("Total elapsed cycles (full run)")
-    axes[0].set_title("Workload versus measured cycles")
-    axes[1].plot(sizes, [m / c for m, c in zip(macs, cycles)], "o-", color="#FF6500")
-    axes[1].set_xlabel("Matrix size (K × L × Q)")
-    axes[1].set_ylabel("Measured MACs/cycle per module")
-    axes[1].set_title("Experimental throughput")
-    for ax in axes:
-        if max_size is not None:
-            ax.set_xlim(0, max_size)
-        ax.grid(alpha=.25)
+        raise ValueError("No completed experiments match the selection in {}".format(csv_path))
+    outputs = plot_paths(output)
+    dimensions = ("k", "l", "q")
+    for dimension, destination in zip(dimensions, outputs):
+        fixed = tuple(name for name in dimensions if name != dimension)
+        selected_rows = [row for row in rows if all(row[name] == 1 for name in fixed)]
+        groups = defaultdict(list)
+        for row in selected_rows:
+            groups[tuple(row[name] for name in fixed)].append(row)
+        legend_columns = min(4, max(1, len(groups)))
+        legend_rows = (len(groups) + legend_columns - 1) // legend_columns
+        legend_height = legend_rows * 0.24
+        height = 6.5 + legend_height
+        fig, ax = plt.subplots(figsize=(14, height))
+        palette = plt.get_cmap("tab20")
+        if not selected_rows:
+            ax.text(0.5, 0.5, "No completed experiments with {}=1 and {}=1".format(
+                fixed[0].upper(), fixed[1].upper()), transform=ax.transAxes, ha="center")
+        for index, (fixed_values, experiments) in enumerate(sorted(groups.items())):
+            color = palette(index % 20)
+            marker = ("o", "s", "^", "D")[(index // 20) % 4]
+            style = ("-", "--", "-.", ":")[(index // 20) % 4]
+            label = ", ".join("{}={}".format(name.upper(), value)
+                              for name, value in zip(fixed, fixed_values))
+            experiments.sort(key=lambda row: row[dimension])
+            x_values = [row[dimension] for row in experiments]
+            throughput = [row["macs_per_module"] / row["elapsed_cycles"] for row in experiments]
+            # Preserve every measured point. Only connect experiments with identical
+            # values for the other two dimensions; average repeats at the same x.
+            by_x = defaultdict(list)
+            for x_value, rate in zip(x_values, throughput):
+                by_x[x_value].append(rate)
+            if len(by_x) > 1:
+                x_line = sorted(by_x)
+                ax.plot(x_line, [sum(by_x[x]) / len(by_x[x]) for x in x_line],
+                        color=color, linestyle=style, linewidth=1.4, alpha=0.8)
+            ax.scatter(x_values, throughput, s=40, color=color, marker=marker,
+                       alpha=0.8, edgecolors="white", linewidths=0.4, label=label, zorder=3)
+        ax.set_xlabel("{} (tile count)".format(dimension.upper()))
+        ax.set_ylabel("Measured MACs/cycle per module")
+        ax.set_title("{} versus MACs/cycle — each curve fixes {} and {}".format(
+            dimension.upper(), fixed[0].upper(), fixed[1].upper()), fontsize=17, weight="bold")
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_ylim(bottom=0)
+        ax.grid(alpha=0.25)
         ax.set_axisbelow(True)
-    fig.suptitle("Cleopatra Matrix Size Experiments — Per Module")
-    fig.tight_layout(rect=(0, 0, 1, .93))
-    fig.savefig(str(output), dpi=200)
+        handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.65 / height),
+                   ncol=legend_columns, fontsize=9, frameon=False,
+                   title="Fixed ({}, {}) values".format(fixed[0].upper(), fixed[1].upper()))
+        note = ("Follow a curve to vary only {0}; compare points at the same {0} across legend entries "
+                "to compare different {1}/{2} combinations.\n"
+                "Points are measured runs; lines connect means of repeats. "
+                "A single-point group has no measured sweep. {3} experiments.").format(
+                    dimension.upper(), fixed[0].upper(), fixed[1].upper(), len(selected_rows))
+        fig.text(0.5, 0.015, note, ha="center", va="bottom", fontsize=9, color="#526079")
+        fig.subplots_adjust(left=0.09, right=0.98, top=0.91,
+                            bottom=(legend_height + 1.25) / height)
+        fig.savefig(str(destination), dpi=200, facecolor="white")
+        plt.close(fig)
+    fig, ax = plt.subplots(figsize=(11, 6))
+    # Broad solid underlay, narrower dashes, and fine dots remain visible even
+    # at identical coordinates. Nested hollow markers preserve coincident points.
+    sweep_styles = (
+        ("k", "#2563eb", "-", 5.0, "o", 12, 3),
+        ("l", "#0d9488", "--", 3.2, "s", 8, 4),
+        ("q", "#ea580c", ":", 1.8, "^", 4.5, 5),
+    )
+    for dimension, color, style, width, marker, marker_size, order in sweep_styles:
+        fixed = tuple(name for name in dimensions if name != dimension)
+        experiments = [row for row in rows if all(row[name] == 1 for name in fixed)]
+        if not experiments:
+            continue
+        experiments.sort(key=lambda row: row[dimension])
+        sizes = [row["k"] * row["l"] * row["q"] for row in experiments]
+        rates = [row["macs_per_module"] / row["elapsed_cycles"] for row in experiments]
+        by_size = defaultdict(list)
+        for size, rate in zip(sizes, rates):
+            by_size[size].append(rate)
+        x_line = sorted(by_size)
+        ax.plot(x_line, [sum(by_size[x]) / len(by_size[x]) for x in x_line],
+                color=color, linestyle=style, linewidth=width, marker=marker,
+                markersize=marker_size, markerfacecolor="none", markeredgewidth=1.4,
+                zorder=order, label="{} sweep ({}={} = 1)".format(
+                    dimension.upper(), fixed[0].upper(), fixed[1].upper()))
+        ax.scatter(sizes, rates, edgecolors=color, facecolors="none", marker=marker,
+                   s=marker_size ** 2, linewidths=1.4, zorder=order + 0.1)
+    # Keep older/custom CSV combinations visible without connecting unrelated runs.
+    mixed = [row for row in rows if sum(row[name] != 1 for name in dimensions) > 1]
+    if mixed:
+        ax.scatter([row["k"] * row["l"] * row["q"] for row in mixed],
+                   [row["macs_per_module"] / row["elapsed_cycles"] for row in mixed],
+                   color="#64748b", marker="x", label="Other combinations")
+    ax.set_xlabel("Workload size (K × L × Q)")
+    ax.set_ylabel("Measured MACs/cycle per module")
+    ax.set_title("K × L × Q versus MACs/cycle", fontsize=17, weight="bold")
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.set_ylim(bottom=0)
+    ax.grid(alpha=0.25)
+    ax.set_axisbelow(True)
+    ax.legend(handlelength=4)
+    fig.text(0.5, 0.025, "Solid/dashed/dotted curves and nested hollow markers expose overlaps; values are not shifted.\n"
+             "The shared (1, 1, 1) baseline is used by all three sweep curves.",
+             ha="center", fontsize=9, color="#526079")
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    fig.savefig(str(outputs[-1]), dpi=200, facecolor="white")
     plt.close(fig)
+    return outputs
+
+
+
+def plot_all_results(csv_path, output):
+    """Generate and report only the four requested PNGs."""
+    plots = plot_results(csv_path, output)
+    for plot in plots:
+        print("Plot: {}".format(plot))
+    return plots
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--first", type=int, default=5, help="Minimum K, L, Q for the random sweep")
-    parser.add_argument("--last", type=int, default=30, help="Maximum K, L, Q for the random sweep")
-    parser.add_argument("--count", type=int, default=25, help="Random mixed combinations, in addition to the 64 small runs")
     for dimension in ("k", "l", "q"):
         parser.add_argument("--" + dimension, type=int, help="Single-run tile count; supply all three")
-    parser.add_argument("--seed", type=int, help="Reproduce the experiment seed sequence; otherwise random")
-    parser.add_argument("--output-dir", type=Path, help="New directory for logs, reports, stimuli and results")
+    parser.add_argument("--seed", type=int, help="Reproduce stimulus seeds; otherwise random")
+    parser.add_argument("--output-dir", type=Path, help="New directory for logs, reports and stimuli; CSV/plots go in timing_analysis/results")
     parser.add_argument("--skip-compile", action="store_true", help="Use an already compiled sim/work library")
     parser.add_argument("--dry-run", action="store_true", help="Print planned dimensions and seeds without writing files")
-    parser.add_argument("--plot-only", type=Path, metavar="CSV", help="Plot existing results without running simulation")
+    parser.add_argument("--plot-only", type=Path, nargs="?", metavar="CSV",
+                        const=ROOT / "timing_analysis" / "results" / "results.csv",
+                        help="Analyze a saved CSV without simulation (default: timing_analysis/results/results.csv)")
     args = parser.parse_args()
     if args.plot_only:
         output = args.plot_only.with_name(args.plot_only.stem + "_plot.png")
         version = 1
-        while output.exists():
+        while any(path.exists() for path in plot_paths(output)):
             version += 1
             output = args.plot_only.with_name(args.plot_only.stem + "_plot_v{}.png".format(version))
-        plot_results(args.plot_only, output)
-        print("Plot: {}".format(output))
+        plot_all_results(args.plot_only, output)
         return
     dimensions = (args.k, args.l, args.q)
     rng = random.Random(args.seed) if args.seed is not None else random.SystemRandom()
@@ -114,22 +239,10 @@ def main():
             parser.error("Supply positive --k, --l and --q together")
         sizes = [dimensions]
     else:
-        if not 1 <= args.first <= args.last:
-            parser.error("Require 1 <= --first <= --last")
-        candidates = [(k, l, q)
-                      for k in range(args.first, args.last + 1)
-                      for l in range(args.first, args.last + 1)
-                      for q in range(args.first, args.last + 1)
-                      if not k == l == q]
-        if not 1 <= args.count <= len(candidates):
-            parser.error("--count must be between 1 and {} for this mixed-combination range".format(len(candidates)))
-        random_sizes = rng.sample(candidates, args.count)
-        random_sizes.sort(key=lambda size: (size[0] * size[1] * size[2], size))
-        sizes = [(k, l, q)
-                 for k in range(1, 5)
-                 for l in range(1, 5)
-                 for q in range(1, 5)]
-        sizes.extend(random_sizes)
+        # Preserve sweep order while sharing the (1, 1, 1) baseline.
+        sizes = [(1, 1, q) for q in range(1, 21)]
+        sizes.extend((1, l, 1) for l in range(2, 21))
+        sizes.extend((k, 1, 1) for k in range(2, 21))
     used_seeds = set()
     plan = []
     for index, size in enumerate(sizes, 1):
@@ -147,17 +260,20 @@ def main():
     for tool in ("vsim",) if args.skip_compile else ("make", "vsim", "vlib"):
         if shutil.which(tool) is None:
             parser.error("{} is not on PATH; run in your Questa/Bender environment".format(tool))
-    # Unique output root prevents old results/reports from being reused.
-    output = args.output_dir or ROOT / "timing_analysis" / "results" / datetime.now().strftime("run_%Y%m%d_%H%M%S_%f")
+    # Keep per-run simulation artifacts isolated; publish the latest CSV/PNGs
+    # directly in results so --plot-only uses the latest experiment data.
+    results_dir = ROOT / "timing_analysis" / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    output = args.output_dir or results_dir.parent / datetime.now().strftime("run_%Y%m%d_%H%M%S_%f")
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=False)
-    csv_path = output / "results.csv"
+    if not args.skip_compile:
+        execute(["make", "hw-compile"], output / "compile.log")
+    csv_path = results_dir / "results.csv"
     with csv_path.open("w", newline="") as destination:
         writer = csv.DictWriter(destination, fieldnames=FIELDS)
         writer.writeheader()
         destination.flush()
-        if not args.skip_compile:
-            execute(["make", "hw-compile"], output / "compile.log")
         directory_counts = {}
         try:
             for (k, l, q), seeds in plan:
@@ -193,8 +309,8 @@ def main():
             with csv_path.open() as source:
                 completed = list(csv.DictReader(source))
             if completed:
-                plot_results(csv_path, output / "results.png")
-    print("Results: {}\nPlot: {}".format(csv_path, output / "results.png"))
+                plot_all_results(csv_path, results_dir / "results.png")
+    print("Results: {}".format(csv_path))
 
 
 if __name__ == "__main__":

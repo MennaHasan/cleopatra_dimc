@@ -218,7 +218,7 @@ always_ff @(posedge WCK or negedge RESETn) begin
     end
     else begin
         if (mem_write_en) begin
-            for (int i = 0; i < 256; i++) begin
+            for (int i = 0; i < SECTION_WIDTH; i++) begin
                 if (M[i]) kernel_mem[WA[6:2]][WA[1:0]][i] <= D[i];
             end
         end

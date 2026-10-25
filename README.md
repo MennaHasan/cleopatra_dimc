@@ -63,6 +63,11 @@ python3 timing_analysis/timing_analysis.py timing_analysis/timing_report_1.txt -
 python3 timing_analysis/run_experiments.py
 ```
 
+to run the plots on the same csv results file
+```bash
+python3 timing_analysis/run_experiments.py --plot-only
+```
+
 to Preview the selected sizes without running simulations:
 
 ```bash

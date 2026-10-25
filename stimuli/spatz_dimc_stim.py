@@ -77,7 +77,9 @@ def compute_mac(
     compute_mask: int,
     sign_8b: int = 0,
 ) -> int:
-    valid_bits = max(0, 1024 - int(compute_mask))
+    # RTL passes only compute_mask[9:0]; 1024 therefore means zero masked bits.
+    compute_mask = int(compute_mask) & 0x3ff
+    valid_bits = 1024 - compute_mask
 
     acc = 0
     for i in range(BYTES_PER_ROW):

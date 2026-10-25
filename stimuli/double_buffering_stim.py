@@ -112,6 +112,8 @@ def calculate_top_golden(
     Inner dimensions are packed bytes. 1/2/4-bit lanes are always unsigned;
     sign_mode affects 8-bit lanes only. Masks apply before lane extraction.
     """
+    # Match the RTL register slice: only the low ten bits reach the macro.
+    compute_mask = int(compute_mask) & 0x3ff
     if precision not in (1, 2, 4, 8):
         raise ValueError("precision must be 1, 2, 4, or 8")
     def operand(value: int, signed: bool) -> int:
@@ -198,6 +200,8 @@ def main() -> None:
     parser.add_argument("--q", type=int, default=Q, help="Input column tiles (8 columns each)")
     parser.add_argument("--precision", type=int, choices=(1, 2, 4, 8), default=8,
                         help="Precision for the full Test 1 golden (default: 8)")
+    parser.add_argument("--mask-test-goldens", action="store_true",
+                        help="Generate the cross-precision masked goldens for top Test 32")
     parser.add_argument(
         "--untile-only",
         action="store_true",
@@ -206,6 +210,8 @@ def main() -> None:
     args = parser.parse_args()
     if min(args.k, args.l, args.q) < 1:
         parser.error("k, l, and q must be positive")
+    if args.mask_test_goldens and args.l < 3:
+        parser.error("--mask-test-goldens requires at least three inner tiles (--l 3)")
     if args.untile_only and (args.k, args.l, args.q) != (K, L, Q):
         parser.error("--untile-only currently supports the default dimensions only")
 
@@ -300,6 +306,18 @@ def main() -> None:
                          calculate_top_golden(kernel_stim, feature_stim, 1, 3, 1,
                                               bias=-11, compute_mask=mask,
                                               write_mask=pattern))
+
+    if args.mask_test_goldens:
+        # Test 32 resets macros before each job, so disabled writes retain zero.
+        # Keep bit zero enabled to exercise the last surviving bit at mask=1023.
+        write_pattern = int("0123456789abcdef13579bdf2468ace0fedcba98765432100f1e2d3c4b5a6979", 16)
+        for precision in (1, 2, 4, 8):
+            for compute_mask in (0, 1, 5, 257, 1023, 1024):
+                write_matrix(args.outdir / f"top_mask_{precision}bit_{compute_mask}_golden.txt",
+                             calculate_top_golden(kernel_stim, feature_stim, 1, 3, 1,
+                                                  bias=-11, precision=precision,
+                                                  compute_mask=compute_mask,
+                                                  write_mask=write_pattern))
 
     print(f"Double-buffering stimulus written to {args.outdir.resolve()}")
 

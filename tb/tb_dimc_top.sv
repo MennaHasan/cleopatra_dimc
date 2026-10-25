@@ -834,13 +834,34 @@ module tb_dimc_top;
     pass_test();
   endtask
 
+  // One numbered test combines partial writes and thermometric bit masks
+  // at every precision, including the 10-bit register wraparound at 1024.
+  task automatic test_32;
+    logic [255:0] mask=256'h0123456789abcdef13579bdf2468ace0fedcba98765432100f1e2d3c4b5a6979;
+    int compute_masks[6]='{0,1,5,257,1023,1024};
+    for (int mode_=0;mode_<4;mode_++) begin
+      for (int i=0;i<6;i++) begin
+        begin_test(32,$sformatf("Unsigned %0d-bit masking, compute mask=%0d",1<<mode_,compute_masks[i]));
+        // Reset on every subcase keeps disabled weight bits initially zero.
+        fill_memory(1,3,1); configure(1,3,1,0,-11,mode_);
+        reg_write(DIMC_REG_COMPUTE_MASK,compute_masks[i]);
+        for (int word_=0;word_<8;word_++)
+          reg_write(DIMC_REG_WRITE_MASK+word_,mask[word_*32 +:32]);
+        stalls=1; response_delay=13;
+        start_job(); wait_completion(); check_idle();
+        check_results(1,1,$sformatf("top_mask_%0dbit_%0d_golden.txt",1<<mode_,compute_masks[i]));
+      end
+    end
+    pass_test();
+  endtask
+
   initial begin
     longint unsigned source_weights, source_inputs, source_outputs, next_base;
     periph.req=0; periph.add=0; periph.wen=1; periph.data=0;
     periph.be='1; periph.id=1;
     void'($value$plusargs("TEST=%d",selected_test));
-    check_condition(selected_test>=0 && selected_test<=31 && selected_test!=22,
-                    "TEST must be 0 (all), 1..21, or 23..31");
+    check_condition(selected_test>=0 && selected_test<=32 && selected_test!=22,
+                    "TEST must be 0 (all), 1..21, or 23..32");
     void'($value$plusargs("MATRIX_K=%d",matrix_k));
     void'($value$plusargs("MATRIX_L=%d",matrix_l));
     void'($value$plusargs("MATRIX_Q=%d",matrix_q));
@@ -919,6 +940,7 @@ module tb_dimc_top;
     if (selected_test==0 || selected_test==29) test_29();
     if (selected_test==0 || selected_test==30) test_30();
     if (selected_test==0 || selected_test==31) test_31();
+    if (selected_test==0 || selected_test==32) test_32();
     $display("[DIMC_TOP] RESULTS: %0d PASSED, 0 FAILED",passed);
     $display("[DIMC_TOP] ALL SELECTED TESTS PASSED");
     tests_passed=1;

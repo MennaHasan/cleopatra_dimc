@@ -1,4 +1,4 @@
-"""Run independent Test 1 experiments and collect per-module MACs and cycles.
+"""Run Test 1 experiments for one DIMC module with two macros.
 
 Default: 58 distinct experiments across three controlled sweeps:
 Q=1..20 with K=L=1; L=1..20 with K=Q=1; K=1..20 with L=Q=1.
@@ -34,7 +34,7 @@ from timing_analysis import read_summary
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FIELDS = ("k", "l", "q", "precision", "module_1_seed", "module_2_seed",
+FIELDS = ("k", "l", "q", "precision", "stimulus_seed",
           "macs_per_module", "elapsed_cycles", "report")
 
 
@@ -51,16 +51,16 @@ def collect_result(report, k, l, q, seeds, precision=8):
     summary = read_summary(report)
     inner_elements = l * (1024 // precision)
     expected = (k * 32) * inner_elements * (q * 8)
-    for module in (1, 2):
-        sizes = summary["modules"].get(module, {})
-        if ("Kernel" not in sizes or "Input" not in sizes or "Output" not in sizes
-                or sizes["Kernel"][:2] != (k * 32, inner_elements)
-                or sizes["Input"][:2] != (inner_elements, q * 8)
-                or sizes["Output"][:2] != (k * 32, q * 8)
-                or sizes["Kernel"][3] != precision or sizes["Input"][3] != precision
-                or summary["macs"][module] != expected):
-            raise ValueError("Report dimensions/MACs do not match this experiment: {}".format(report))
-    return dict(zip(FIELDS, (k, l, q, precision, seeds[0], seeds[1], expected,
+    sizes = summary["modules"].get(1, {})
+    if (set(summary["modules"]) != {1}
+            or "Kernel" not in sizes or "Input" not in sizes or "Output" not in sizes
+            or sizes["Kernel"][:2] != (k * 32, inner_elements)
+            or sizes["Input"][:2] != (inner_elements, q * 8)
+            or sizes["Output"][:2] != (k * 32, q * 8)
+            or sizes["Kernel"][3] != precision or sizes["Input"][3] != precision
+            or summary["macs"][1] != expected):
+        raise ValueError("Report dimensions/MACs do not match this experiment: {}".format(report))
+    return dict(zip(FIELDS, (k, l, q, precision, seeds[0], expected,
                             summary["cycles"], str(report))))
 
 
@@ -101,58 +101,32 @@ def plot_results(csv_path, output):
     for dimension, destination in zip(dimensions, outputs):
         fixed = tuple(name for name in dimensions if name != dimension)
         selected_rows = [row for row in rows if all(row[name] == 1 for name in fixed)]
-        groups = defaultdict(list)
-        for row in selected_rows:
-            groups[tuple(row[name] for name in fixed)].append(row)
-        legend_columns = min(4, max(1, len(groups)))
-        legend_rows = (len(groups) + legend_columns - 1) // legend_columns
-        legend_height = legend_rows * 0.24
-        height = 6.5 + legend_height
-        fig, ax = plt.subplots(figsize=(14, height))
-        palette = plt.get_cmap("tab20")
+        fig, ax = plt.subplots(figsize=(14, 6.5))
         if not selected_rows:
             ax.text(0.5, 0.5, "No completed experiments with {}=1 and {}=1".format(
                 fixed[0].upper(), fixed[1].upper()), transform=ax.transAxes, ha="center")
-        for index, (fixed_values, experiments) in enumerate(sorted(groups.items())):
-            color = palette(index % 20)
-            marker = ("o", "s", "^", "D")[(index // 20) % 4]
-            style = ("-", "--", "-.", ":")[(index // 20) % 4]
-            label = ", ".join("{}={}".format(name.upper(), value)
-                              for name, value in zip(fixed, fixed_values))
-            experiments.sort(key=lambda row: row[dimension])
-            x_values = [row[dimension] for row in experiments]
-            throughput = [row["macs_per_module"] / row["elapsed_cycles"] for row in experiments]
-            # Preserve every measured point. Only connect experiments with identical
-            # values for the other two dimensions; average repeats at the same x.
-            by_x = defaultdict(list)
-            for x_value, rate in zip(x_values, throughput):
-                by_x[x_value].append(rate)
-            if len(by_x) > 1:
-                x_line = sorted(by_x)
-                ax.plot(x_line, [sum(by_x[x]) / len(by_x[x]) for x in x_line],
-                        color=color, linestyle=style, linewidth=1.4, alpha=0.8)
-            ax.scatter(x_values, throughput, s=40, color=color, marker=marker,
-                       alpha=0.8, edgecolors="white", linewidths=0.4, label=label, zorder=3)
+        selected_rows.sort(key=lambda row: row[dimension])
+        x_values = [row[dimension] for row in selected_rows]
+        throughput = [row["macs_per_module"] / row["elapsed_cycles"] for row in selected_rows]
+        # Preserve every measured point and connect means of repeated x values.
+        by_x = defaultdict(list)
+        for x_value, rate in zip(x_values, throughput):
+            by_x[x_value].append(rate)
+        if len(by_x) > 1:
+            x_line = sorted(by_x)
+            ax.plot(x_line, [sum(by_x[x]) / len(by_x[x]) for x in x_line],
+                    color="#2563eb", linewidth=1.4, alpha=0.8)
+        ax.scatter(x_values, throughput, s=40, color="#2563eb", marker="o",
+                   alpha=0.8, edgecolors="white", linewidths=0.4, zorder=3)
         ax.set_xlabel("{} (tile count)".format(dimension.upper()))
         ax.set_ylabel("Measured MACs/cycle per module")
-        ax.set_title("{} versus MACs/cycle — each curve fixes {} and {}".format(
+        ax.set_title("{} versus MACs/cycle\nFixed: {}=1, {}=1".format(
             dimension.upper(), fixed[0].upper(), fixed[1].upper()), fontsize=17, weight="bold")
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.set_ylim(bottom=0)
         ax.grid(alpha=0.25)
         ax.set_axisbelow(True)
-        handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.65 / height),
-                   ncol=legend_columns, fontsize=9, frameon=False,
-                   title="Fixed ({}, {}) values".format(fixed[0].upper(), fixed[1].upper()))
-        note = ("Follow a curve to vary only {0}; compare points at the same {0} across legend entries "
-                "to compare different {1}/{2} combinations.\n"
-                "Points are measured runs; lines connect means of repeats. "
-                "A single-point group has no measured sweep. {3} experiments.").format(
-                    dimension.upper(), fixed[0].upper(), fixed[1].upper(), len(selected_rows))
-        fig.text(0.5, 0.015, note, ha="center", va="bottom", fontsize=9, color="#526079")
-        fig.subplots_adjust(left=0.09, right=0.98, top=0.91,
-                            bottom=(legend_height + 1.25) / height)
+        fig.subplots_adjust(left=0.09, right=0.98, top=0.84, bottom=0.13)
         fig.savefig(str(destination), dpi=200, facecolor="white")
         plt.close(fig)
     fig, ax = plt.subplots(figsize=(11, 6))
@@ -196,10 +170,7 @@ def plot_results(csv_path, output):
     ax.grid(alpha=0.25)
     ax.set_axisbelow(True)
     ax.legend(handlelength=4)
-    fig.text(0.5, 0.025, "Solid/dashed/dotted curves and nested hollow markers expose overlaps; values are not shifted.\n"
-             "The shared (1, 1, 1) baseline is used by all three sweep curves.",
-             ha="center", fontsize=9, color="#526079")
-    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    fig.tight_layout()
     fig.savefig(str(outputs[-1]), dpi=200, facecolor="white")
     plt.close(fig)
     return outputs
@@ -250,15 +221,13 @@ def main():
     used_seeds = set()
     plan = []
     for index, size in enumerate(sizes, 1):
-        seeds = []
-        while len(seeds) < 2:
+        seed = rng.randrange(1, 2**31)
+        while seed in used_seeds:
             seed = rng.randrange(1, 2**31)
-            if seed not in used_seeds:
-                used_seeds.add(seed)
-                seeds.append(seed)
-        plan.append((size, seeds))
-        print("Experiment {}/{}: K={}, L={}, Q={}; module seeds {} / {}".format(
-            index, len(sizes), *size, *seeds))
+        used_seeds.add(seed)
+        plan.append((size, seed))
+        print("Experiment {}/{}: K={}, L={}, Q={}; stimulus seed {}".format(
+            index, len(sizes), *size, seed))
     if args.dry_run:
         return
     for tool in ("vsim",) if args.skip_compile else ("make", "vsim", "vlib"):
@@ -280,7 +249,7 @@ def main():
         destination.flush()
         directory_counts = {}
         try:
-            for (k, l, q), seeds in plan:
+            for (k, l, q), seed in plan:
                 name = "k{}_l{}_q{}".format(k, l, q)
                 directory_counts[name] = directory_counts.get(name, 0) + 1
                 occurrence = directory_counts[name]
@@ -288,21 +257,19 @@ def main():
                     name += "_repeat{}".format(occurrence)
                 experiment = output / name
                 experiment.mkdir()
-                for module, seed in enumerate(seeds, 1):
-                    stim = experiment / "module_{}".format(module)
-                    execute([sys.executable, str(ROOT / "stimuli/double_buffering_stim.py"),
-                             "--k", str(k), "--l", str(l), "--q", str(q), "--precision", str(args.precision), "--seed", str(seed),
-                             "--outdir", str(stim)], experiment / "stimulus_{}.log".format(module))
+                stim = experiment / "stimulus"
+                execute([sys.executable, str(ROOT / "stimuli/double_buffering_stim.py"),
+                         "--k", str(k), "--l", str(l), "--q", str(q), "--precision", str(args.precision), "--seed", str(seed),
+                         "--outdir", str(stim)], experiment / "stimulus.log")
                 execute(["vsim", "-c", "-voptargs=+acc", "-l", str(experiment / "simulation.log"),
                          "-lib", "sim/work", "tb_dimc_top", "+TEST=1", "+MATRIX_K={}".format(k),
                          "+MATRIX_L={}".format(l), "+MATRIX_Q={}".format(q),
                          "+PRECISION={}".format(args.precision),
-                         "+STIM_DIR_1={}".format(experiment / "module_1"),
-                         "+STIM_DIR_2={}".format(experiment / "module_2"),
+                         "+STIM_DIR_1={}".format(stim),
                          "+TIMING_REPORT_DIR={}".format(experiment),
                          "-do", "do scripts/run_top.tcl"], experiment / "simulation.stdout")
                 report = experiment / "timing_report_1.txt"
-                row = collect_result(report, k, l, q, seeds, args.precision)
+                row = collect_result(report, k, l, q, (seed,), args.precision)
                 writer.writerow(row)
                 destination.flush()
                 print("Completed: {:,} MACs/module; {:,} cycles; {:.4f} MACs/cycle/module".format(

@@ -100,6 +100,51 @@ module tb_dimc_top;
   longint unsigned watchdog_cycles=500000;
   string test_name="initialization";
 
+  // Test 1 timing observer signals from the single module's two ping-pong macros.
+  logic test1_timing_done;
+  bit test1_verified=0;
+  logic timing_weight_load, timing_load_macro, timing_active_macro, timing_input_push;
+  logic [1:0] timing_feature_load, timing_compute_issue;
+  logic timing_result_push, timing_output_grant;
+  logic [7:0] timing_weight_section;
+  logic [31:0] timing_compute_tile;
+  logic [2:0] timing_compute_vector;
+  logic [1:0][1:0] timing_feature_section;
+  logic [1:0][6:0] timing_compute_row;
+
+  assign timing_weight_load=i_dut.i_module.i_datapath.weight_load;
+  assign timing_load_macro=i_dut.i_module.i_datapath.load_macro;
+  assign timing_active_macro=i_dut.i_module.i_datapath.active_q;
+  assign timing_input_push=i_dut.i_module.i_datapath.inp_push;
+  assign timing_weight_section=i_dut.i_module.i_datapath.weights_loaded_q;
+  assign timing_compute_tile=((i_dut.i_module.i_datapath.k_q*
+                               i_dut.i_module.i_datapath.q_size_q+
+                               i_dut.i_module.i_datapath.q_q)*
+                              i_dut.i_module.i_datapath.l_size_q+
+                              i_dut.i_module.i_datapath.l_q+1);
+  assign timing_compute_vector=i_dut.i_module.i_datapath.vector_q;
+  assign timing_feature_load=~i_dut.i_module.i_datapath.fcsn;
+  assign timing_compute_issue=i_dut.i_module.i_datapath.compe &
+                              ~i_dut.i_module.i_datapath.rcsn;
+  assign timing_feature_section=i_dut.i_module.i_datapath.fa;
+  assign timing_compute_row=i_dut.i_module.i_datapath.ra;
+  assign timing_result_push=i_dut.i_module.i_datapath.i_cleopatra.u_dimc_dual.out_push;
+  assign timing_output_grant=i_dut.i_module.output_tcdm.req &&
+                             i_dut.i_module.output_tcdm.gnt;
+
+  tb_dimc_test1_timing i_test1_timing (
+    .clk_i(clk), .rst_ni(rst_n), .enable_i(test_number==1), .verified_i(test1_verified),
+    .start_request_i(periph.req && periph.gnt && !periph.wen && periph.add==0),
+    .config_i(i_dut.config_), .weight_load_i(timing_weight_load),
+    .load_macro_i(timing_load_macro), .active_macro_i(timing_active_macro),
+    .input_push_i(timing_input_push), .weight_section_i(timing_weight_section),
+    .compute_tile_i(timing_compute_tile), .compute_vector_i(timing_compute_vector),
+    .feature_load_i(timing_feature_load), .compute_issue_i(timing_compute_issue),
+    .feature_section_i(timing_feature_section), .compute_row_i(timing_compute_row),
+    .result_push_i(timing_result_push), .output_grant_i(timing_output_grant),
+    .done_o(test1_timing_done)
+  );
+
   // Test helpers only: report a failed check, drive the bus, prepare memory,
   // and compare output words.
   task automatic check_condition(input logic condition, input string message_);
@@ -239,6 +284,9 @@ module tb_dimc_top;
       check_results(matrix_k,matrix_q,"double_buffering_golden_matmul_output.txt");
     else
       check_results(matrix_k,matrix_q,$sformatf("double_buffering_golden_matmul_output_%0dbit.txt",matrix_precision));
+    check_condition(test1_timing_done,"Test 1 timing did not reach the final output write");
+    test1_verified=1;
+    @(negedge clk); // Let the timing observer publish the verified report.
     pass_test();
   endtask
   task automatic test_2;

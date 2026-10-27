@@ -1,0 +1,438 @@
+TEST 1 TIMING REPORT
+Numerical verification: PASS (one module, two macros)
+Total elapsed cycles: 1159 (start-request acceptance to final output write)
+Precision used: 8 bits
+Signing used: weights=unsigned; inputs=unsigned
+Packed inner dimension: 128 bytes per row/vector
+Macro weights region: 32 rows x 1024 bits (each macro)
+Macro input vector region: 1024 bits
+Matrix sizes for module 1 (rows x columns):
+  Module 1:
+    Input:  128 x 24 = 3072 elements; 8 bits/element
+    Kernel: 32 x 128 = 4096 elements; 8 bits/element
+    Output: 32 x 24 = 768 elements; 32 bits/element
+    Weight matrix tiles (combined capacity): 32768 bits / 65536 bits = 0.5000 tiles
+
+Throughput for module 1 (both macros, including loading and output writes):
+  Total MACs = 32 output rows x 128 inner elements x 24 output columns = 98304 MACs
+  Total MACs/cycle = 98304 MACs / 1159 elapsed cycles = 84.8179 MACs/cycle
+  Macro 1 completed 2 tile-products; macro 2 completed 1 tile-products
+
+[TEST1 TIMING] CYCLE 0
+  Module 1 start request accepted; elapsed-cycle origin = 0.
+
+[TEST1 TIMING] CYCLE 11
+  Module 1 macro 1 tile-product 1: WEIGHT LOAD START
+
+[TEST1 TIMING] CYCLE 138
+  Module 1 macro 1 tile-product 1: WEIGHT LOAD END [11..138], elapsed=127 cycles (128 macro writes)
+
+[TEST1 TIMING] CYCLE 143
+  Module 1 macro 1 tile-product 1 vector 1: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 146
+  Module 1 macro 1 tile-product 1 vector 1: VECTOR LOAD TO FIFO END [143..146], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 147
+  Module 1 macro 1 tile-product 1 vector 2: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 150
+  Module 1 macro 1 tile-product 1 vector 2: VECTOR LOAD TO FIFO END [147..150], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 151
+  Module 1 macro 1 tile-product 1 vector 3: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 154
+  Module 1 macro 1 tile-product 1 vector 3: VECTOR LOAD TO FIFO END [151..154], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 155
+  Module 1 macro 1 tile-product 1 vector 4: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 158
+  Module 1 macro 1 tile-product 1 vector 4: VECTOR LOAD TO FIFO END [155..158], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 159
+  Module 1 macro 1 tile-product 1 vector 5: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 162
+  Module 1 macro 1 tile-product 1 vector 5: VECTOR LOAD TO FIFO END [159..162], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 163
+  Module 1 macro 1 tile-product 1 vector 6: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 166
+  Module 1 macro 1 tile-product 1 vector 6: VECTOR LOAD TO FIFO END [163..166], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 167
+  Module 1 macro 1 tile-product 1 vector 7: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 170
+  Module 1 macro 1 tile-product 1 vector 7: VECTOR LOAD TO FIFO END [167..170], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 171
+  Module 1 macro 1 tile-product 1 vector 8: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 174
+  Module 1 macro 1 tile-product 1 vector 8: VECTOR LOAD TO FIFO END [171..174], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 175
+  Module 1 macro 1 tile-product 1 vector 1: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 178
+  Module 1 macro 1 tile-product 1 vector 1: VECTOR LOAD TO MACRO END [175..178], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 180
+  Module 1 macro 1 tile-product 1 vector 1: COMPUTE START
+  Module 1 macro 1 tile-product 1: TILE COMPUTE START
+
+[TEST1 TIMING] CYCLE 181
+  Module 1 macro 2 tile-product 2: WEIGHT LOAD START
+  OVERLAP: macro 2 loads weights for tile-product 2 while macro 1 computes tile-product 1
+
+[TEST1 TIMING] CYCLE 212
+  Module 1 macro 1 tile-product 1 vector 2: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 215
+  Module 1 macro 1 tile-product 1 vector 2: VECTOR LOAD TO MACRO END [212..215], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 216
+  Module 1 macro 1 tile-product 1 vector 2: COMPUTE START
+  Module 1 macro 1 tile-product 1 vector 1: COMPUTE END [180..216], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 248
+  Module 1 macro 1 tile-product 1 vector 3: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 251
+  Module 1 macro 1 tile-product 1 vector 3: VECTOR LOAD TO MACRO END [248..251], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 252
+  Module 1 macro 1 tile-product 1 vector 3: COMPUTE START
+  Module 1 macro 1 tile-product 1 vector 2: COMPUTE END [216..252], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 284
+  Module 1 macro 1 tile-product 1 vector 4: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 287
+  Module 1 macro 1 tile-product 1 vector 4: VECTOR LOAD TO MACRO END [284..287], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 288
+  Module 1 macro 1 tile-product 1 vector 4: COMPUTE START
+  Module 1 macro 1 tile-product 1 vector 3: COMPUTE END [252..288], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 308
+  Module 1 macro 2 tile-product 2: WEIGHT LOAD END [181..308], elapsed=127 cycles (128 macro writes)
+
+[TEST1 TIMING] CYCLE 313
+  Module 1 macro 2 tile-product 2 vector 1: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 316
+  Module 1 macro 2 tile-product 2 vector 1: VECTOR LOAD TO FIFO END [313..316], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 317
+  Module 1 macro 2 tile-product 2 vector 2: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 320
+  Module 1 macro 2 tile-product 2 vector 2: VECTOR LOAD TO FIFO END [317..320], elapsed=3 cycles (4 input FIFO writes)
+  Module 1 macro 1 tile-product 1 vector 5: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 321
+  Module 1 macro 2 tile-product 2 vector 3: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 323
+  Module 1 macro 1 tile-product 1 vector 5: VECTOR LOAD TO MACRO END [320..323], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 324
+  Module 1 macro 2 tile-product 2 vector 3: VECTOR LOAD TO FIFO END [321..324], elapsed=3 cycles (4 input FIFO writes)
+  Module 1 macro 1 tile-product 1 vector 5: COMPUTE START
+  Module 1 macro 1 tile-product 1 vector 4: COMPUTE END [288..324], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 325
+  Module 1 macro 2 tile-product 2 vector 4: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 328
+  Module 1 macro 2 tile-product 2 vector 4: VECTOR LOAD TO FIFO END [325..328], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 329
+  Module 1 macro 2 tile-product 2 vector 5: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 332
+  Module 1 macro 2 tile-product 2 vector 5: VECTOR LOAD TO FIFO END [329..332], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 356
+  Module 1 macro 1 tile-product 1 vector 6: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 357
+  Module 1 macro 2 tile-product 2 vector 6: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 359
+  Module 1 macro 1 tile-product 1 vector 6: VECTOR LOAD TO MACRO END [356..359], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 360
+  Module 1 macro 2 tile-product 2 vector 6: VECTOR LOAD TO FIFO END [357..360], elapsed=3 cycles (4 input FIFO writes)
+  Module 1 macro 1 tile-product 1 vector 6: COMPUTE START
+  Module 1 macro 1 tile-product 1 vector 5: COMPUTE END [324..360], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 392
+  Module 1 macro 1 tile-product 1 vector 7: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 393
+  Module 1 macro 2 tile-product 2 vector 7: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 395
+  Module 1 macro 1 tile-product 1 vector 7: VECTOR LOAD TO MACRO END [392..395], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 396
+  Module 1 macro 2 tile-product 2 vector 7: VECTOR LOAD TO FIFO END [393..396], elapsed=3 cycles (4 input FIFO writes)
+  Module 1 macro 1 tile-product 1 vector 7: COMPUTE START
+  Module 1 macro 1 tile-product 1 vector 6: COMPUTE END [360..396], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 428
+  Module 1 macro 1 tile-product 1 vector 8: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 429
+  Module 1 macro 2 tile-product 2 vector 8: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 431
+  Module 1 macro 1 tile-product 1 vector 8: VECTOR LOAD TO MACRO END [428..431], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 432
+  Module 1 macro 2 tile-product 2 vector 8: VECTOR LOAD TO FIFO END [429..432], elapsed=3 cycles (4 input FIFO writes)
+  Module 1 macro 1 tile-product 1 vector 8: COMPUTE START
+  Module 1 macro 2 tile-product 2 vector 1: VECTOR LOAD TO MACRO START
+  Module 1 macro 1 tile-product 1 vector 7: COMPUTE END [396..432], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 435
+  Module 1 macro 2 tile-product 2 vector 1: VECTOR LOAD TO MACRO END [432..435], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 468
+  Module 1 macro 1 tile-product 1 vector 8: COMPUTE END [432..468], elapsed=36 cycles (32 results accumulated)
+  Module 1 macro 1 tile-product 1: TILE COMPUTE END [180..468], elapsed=288 cycles (256 results accumulated)
+
+[TEST1 TIMING] CYCLE 472
+  Module 1 output-tile 1: OUTPUT WRITE START
+
+[TEST1 TIMING] CYCLE 503
+  Module 1 output-tile 1: OUTPUT WRITE END [472..503], elapsed=31 cycles (32 memory grants)
+
+[TEST1 TIMING] CYCLE 508
+  Module 1 macro 2 tile-product 2 vector 1: COMPUTE START
+  Module 1 macro 2 tile-product 2: TILE COMPUTE START
+
+[TEST1 TIMING] CYCLE 509
+  Module 1 macro 1 tile-product 3: WEIGHT LOAD START
+  OVERLAP: macro 1 loads weights for tile-product 3 while macro 2 computes tile-product 2
+
+[TEST1 TIMING] CYCLE 540
+  Module 1 macro 2 tile-product 2 vector 2: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 543
+  Module 1 macro 2 tile-product 2 vector 2: VECTOR LOAD TO MACRO END [540..543], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 544
+  Module 1 macro 2 tile-product 2 vector 2: COMPUTE START
+  Module 1 macro 2 tile-product 2 vector 1: COMPUTE END [508..544], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 576
+  Module 1 macro 2 tile-product 2 vector 3: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 579
+  Module 1 macro 2 tile-product 2 vector 3: VECTOR LOAD TO MACRO END [576..579], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 580
+  Module 1 macro 2 tile-product 2 vector 3: COMPUTE START
+  Module 1 macro 2 tile-product 2 vector 2: COMPUTE END [544..580], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 612
+  Module 1 macro 2 tile-product 2 vector 4: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 615
+  Module 1 macro 2 tile-product 2 vector 4: VECTOR LOAD TO MACRO END [612..615], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 616
+  Module 1 macro 2 tile-product 2 vector 4: COMPUTE START
+  Module 1 macro 2 tile-product 2 vector 3: COMPUTE END [580..616], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 636
+  Module 1 macro 1 tile-product 3: WEIGHT LOAD END [509..636], elapsed=127 cycles (128 macro writes)
+
+[TEST1 TIMING] CYCLE 641
+  Module 1 macro 1 tile-product 3 vector 1: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 644
+  Module 1 macro 1 tile-product 3 vector 1: VECTOR LOAD TO FIFO END [641..644], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 645
+  Module 1 macro 1 tile-product 3 vector 2: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 648
+  Module 1 macro 1 tile-product 3 vector 2: VECTOR LOAD TO FIFO END [645..648], elapsed=3 cycles (4 input FIFO writes)
+  Module 1 macro 2 tile-product 2 vector 5: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 649
+  Module 1 macro 1 tile-product 3 vector 3: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 651
+  Module 1 macro 2 tile-product 2 vector 5: VECTOR LOAD TO MACRO END [648..651], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 652
+  Module 1 macro 1 tile-product 3 vector 3: VECTOR LOAD TO FIFO END [649..652], elapsed=3 cycles (4 input FIFO writes)
+  Module 1 macro 2 tile-product 2 vector 5: COMPUTE START
+  Module 1 macro 2 tile-product 2 vector 4: COMPUTE END [616..652], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 653
+  Module 1 macro 1 tile-product 3 vector 4: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 656
+  Module 1 macro 1 tile-product 3 vector 4: VECTOR LOAD TO FIFO END [653..656], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 657
+  Module 1 macro 1 tile-product 3 vector 5: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 660
+  Module 1 macro 1 tile-product 3 vector 5: VECTOR LOAD TO FIFO END [657..660], elapsed=3 cycles (4 input FIFO writes)
+
+[TEST1 TIMING] CYCLE 684
+  Module 1 macro 2 tile-product 2 vector 6: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 685
+  Module 1 macro 1 tile-product 3 vector 6: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 687
+  Module 1 macro 2 tile-product 2 vector 6: VECTOR LOAD TO MACRO END [684..687], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 688
+  Module 1 macro 1 tile-product 3 vector 6: VECTOR LOAD TO FIFO END [685..688], elapsed=3 cycles (4 input FIFO writes)
+  Module 1 macro 2 tile-product 2 vector 6: COMPUTE START
+  Module 1 macro 2 tile-product 2 vector 5: COMPUTE END [652..688], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 720
+  Module 1 macro 2 tile-product 2 vector 7: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 721
+  Module 1 macro 1 tile-product 3 vector 7: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 723
+  Module 1 macro 2 tile-product 2 vector 7: VECTOR LOAD TO MACRO END [720..723], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 724
+  Module 1 macro 1 tile-product 3 vector 7: VECTOR LOAD TO FIFO END [721..724], elapsed=3 cycles (4 input FIFO writes)
+  Module 1 macro 2 tile-product 2 vector 7: COMPUTE START
+  Module 1 macro 2 tile-product 2 vector 6: COMPUTE END [688..724], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 756
+  Module 1 macro 2 tile-product 2 vector 8: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 757
+  Module 1 macro 1 tile-product 3 vector 8: VECTOR LOAD TO FIFO START
+
+[TEST1 TIMING] CYCLE 759
+  Module 1 macro 2 tile-product 2 vector 8: VECTOR LOAD TO MACRO END [756..759], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 760
+  Module 1 macro 1 tile-product 3 vector 8: VECTOR LOAD TO FIFO END [757..760], elapsed=3 cycles (4 input FIFO writes)
+  Module 1 macro 1 tile-product 3 vector 1: VECTOR LOAD TO MACRO START
+  Module 1 macro 2 tile-product 2 vector 8: COMPUTE START
+  Module 1 macro 2 tile-product 2 vector 7: COMPUTE END [724..760], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 763
+  Module 1 macro 1 tile-product 3 vector 1: VECTOR LOAD TO MACRO END [760..763], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 796
+  Module 1 macro 2 tile-product 2 vector 8: COMPUTE END [760..796], elapsed=36 cycles (32 results accumulated)
+  Module 1 macro 2 tile-product 2: TILE COMPUTE END [508..796], elapsed=288 cycles (256 results accumulated)
+
+[TEST1 TIMING] CYCLE 800
+  Module 1 output-tile 2: OUTPUT WRITE START
+
+[TEST1 TIMING] CYCLE 831
+  Module 1 output-tile 2: OUTPUT WRITE END [800..831], elapsed=31 cycles (32 memory grants)
+
+[TEST1 TIMING] CYCLE 836
+  Module 1 macro 1 tile-product 3 vector 1: COMPUTE START
+  Module 1 macro 1 tile-product 3: TILE COMPUTE START
+
+[TEST1 TIMING] CYCLE 868
+  Module 1 macro 1 tile-product 3 vector 2: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 871
+  Module 1 macro 1 tile-product 3 vector 2: VECTOR LOAD TO MACRO END [868..871], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 872
+  Module 1 macro 1 tile-product 3 vector 2: COMPUTE START
+  Module 1 macro 1 tile-product 3 vector 1: COMPUTE END [836..872], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 904
+  Module 1 macro 1 tile-product 3 vector 3: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 907
+  Module 1 macro 1 tile-product 3 vector 3: VECTOR LOAD TO MACRO END [904..907], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 908
+  Module 1 macro 1 tile-product 3 vector 3: COMPUTE START
+  Module 1 macro 1 tile-product 3 vector 2: COMPUTE END [872..908], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 940
+  Module 1 macro 1 tile-product 3 vector 4: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 943
+  Module 1 macro 1 tile-product 3 vector 4: VECTOR LOAD TO MACRO END [940..943], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 944
+  Module 1 macro 1 tile-product 3 vector 4: COMPUTE START
+  Module 1 macro 1 tile-product 3 vector 3: COMPUTE END [908..944], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 976
+  Module 1 macro 1 tile-product 3 vector 5: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 979
+  Module 1 macro 1 tile-product 3 vector 5: VECTOR LOAD TO MACRO END [976..979], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 980
+  Module 1 macro 1 tile-product 3 vector 5: COMPUTE START
+  Module 1 macro 1 tile-product 3 vector 4: COMPUTE END [944..980], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 1012
+  Module 1 macro 1 tile-product 3 vector 6: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 1015
+  Module 1 macro 1 tile-product 3 vector 6: VECTOR LOAD TO MACRO END [1012..1015], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 1016
+  Module 1 macro 1 tile-product 3 vector 6: COMPUTE START
+  Module 1 macro 1 tile-product 3 vector 5: COMPUTE END [980..1016], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 1048
+  Module 1 macro 1 tile-product 3 vector 7: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 1051
+  Module 1 macro 1 tile-product 3 vector 7: VECTOR LOAD TO MACRO END [1048..1051], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 1052
+  Module 1 macro 1 tile-product 3 vector 7: COMPUTE START
+  Module 1 macro 1 tile-product 3 vector 6: COMPUTE END [1016..1052], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 1084
+  Module 1 macro 1 tile-product 3 vector 8: VECTOR LOAD TO MACRO START
+
+[TEST1 TIMING] CYCLE 1087
+  Module 1 macro 1 tile-product 3 vector 8: VECTOR LOAD TO MACRO END [1084..1087], elapsed=3 cycles (4 feature writes)
+
+[TEST1 TIMING] CYCLE 1088
+  Module 1 macro 1 tile-product 3 vector 8: COMPUTE START
+  Module 1 macro 1 tile-product 3 vector 7: COMPUTE END [1052..1088], elapsed=36 cycles (32 results accumulated)
+
+[TEST1 TIMING] CYCLE 1124
+  Module 1 macro 1 tile-product 3 vector 8: COMPUTE END [1088..1124], elapsed=36 cycles (32 results accumulated)
+  Module 1 macro 1 tile-product 3: TILE COMPUTE END [836..1124], elapsed=288 cycles (256 results accumulated)
+
+[TEST1 TIMING] CYCLE 1128
+  Module 1 output-tile 3: OUTPUT WRITE START
+
+[TEST1 TIMING] CYCLE 1159
+  Module 1 output-tile 3: OUTPUT WRITE END [1128..1159], elapsed=31 cycles (32 memory grants)
+  Module 1 macro 1 totals: 2 weight loads, 16 vectors loaded/computed, 2 tile-products
+  Module 1 macro 2 totals: 1 weight loads, 8 vectors loaded/computed, 1 tile-products
+  Module 1 totals: 24 input vectors streamed and 3 output tiles written
+  MODULE 1: ALL OUTPUTS WRITTEN; start-request acceptance -> final write grant = 1159 elapsed cycles
+
+

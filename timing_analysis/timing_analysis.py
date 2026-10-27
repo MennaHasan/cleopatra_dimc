@@ -1,4 +1,4 @@
-"""Extract inclusive activity windows and plot four DIMC macros.
+"""Extract inclusive activity windows for one module with two DIMC macros.
 
 Usage: python3 timing_analysis/timing_analysis.py timing_analysis/timing_report_1.txt
 Add --start/--end to zoom, or --show to open an interactive matplotlib window.
@@ -7,7 +7,7 @@ repeated outputs add a version suffix. This script never creates TXT reports.
 Each run also creates a separate summary PNG for the full experiment.
 The input TXT report is preserved unchanged.
 Intervals describe reported windows, including any stalls inside those windows.
-FIFO activity is attributed to its destination macro; the FIFO is shared.
+The report and plots describe module 1, macros 1 and 2.
 """
 
 import argparse
@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 
 
-MACROS = ((1, 1), (1, 2), (2, 3), (2, 4))
+MACROS = ((1, 1), (1, 2))
 ACTIVITIES = ("WEIGHT LOAD", "VECTOR LOAD TO FIFO", "VECTOR LOAD TO MACRO", "COMPUTE")
 COLORS = ("#2374AB", "#00A896", "#FF6500", "#459544")
 EVENT = re.compile(
@@ -125,14 +125,22 @@ def read_summary(path):
     vector_region = re.search(r"Macro input vector region: (\d+) bits", text)
     observed = {module: set() for module in modules}
     weight_loads = {module: set() for module in modules}
+    observed_by_macro = {module: {macro: set() for m, macro in MACROS if m == module}
+                         for module in modules}
+    weight_loads_by_macro = {module: {macro: set() for m, macro in MACROS if m == module}
+                             for module in modules}
     for match in EVENT.finditer(text):
         module, macro, tile, vector, action, phase, _, _ = match.groups()
         module = int(module)
         if module in modules and phase == "END":
             if action == "TILE COMPUTE":
                 observed[module].add((int(macro), int(tile)))
+                if int(macro) in observed_by_macro[module]:
+                    observed_by_macro[module][int(macro)].add(int(tile))
             elif action == "WEIGHT LOAD":
                 weight_loads[module].add((int(macro), int(tile)))
+                if int(macro) in weight_loads_by_macro[module]:
+                    weight_loads_by_macro[module][int(macro)].add(int(tile))
     # Dimensions give scalar MACs; observed SV events give executed tile counts.
     macs = {m: sizes["Kernel"][0] * sizes["Kernel"][1] * sizes["Input"][1]
             for m, sizes in modules.items()}
@@ -144,6 +152,10 @@ def read_summary(path):
         "vector_region": int(vector_region.group(1)) if vector_region else 1024,
         "observed": {m: len(tiles) for m, tiles in observed.items()},
         "weight_loads": {m: len(tiles) for m, tiles in weight_loads.items()},
+        "observed_by_macro": {m: {macro: len(tiles) for macro, tiles in macros.items()}
+                              for m, macros in observed_by_macro.items()},
+        "weight_loads_by_macro": {m: {macro: len(tiles) for macro, tiles in macros.items()}
+                                   for m, macros in weight_loads_by_macro.items()},
     }
 
 
@@ -172,8 +184,10 @@ def plot_summary(path, summary):
                 summary["modules"][m][label][3], summary["modules"][m][label][2])
             for m in modules])
     rows.extend([
-        ["Weight matrix tiles (capacity)"] + ["{:g}".format(
-            summary["modules"][m]["Kernel"][4] / summary["weight_region"]) for m in modules],
+        ["Weight matrix tiles (combined capacity)"] + ["{:g}".format(
+            summary["modules"][m]["Kernel"][4] /
+            (summary["weight_region"] * len([key for key in MACROS if key[0] == m])))
+            for m in modules],
         ["Needed MACs\noutput rows × inner elements × output columns"] + [
             "{} × {} × {} = {:,}".format(summary["modules"][m]["Kernel"][0],
                 summary["modules"][m]["Kernel"][1], summary["modules"][m]["Input"][1],
@@ -191,25 +205,14 @@ def plot_summary(path, summary):
         cell.set_facecolor("#17324D" if row == 0 else ("#FFFFFF" if row % 2 else "#E7EDF5"))
         if row == 0:
             cell.set_text_props(color="white", weight="bold")
-    fig.text(.06, .275, "Macro capacity: weights = 32 rows × 1024 bits; input vector = {:,} bits".format(
+    fig.text(.06, .275, "Each of 2 macros: weights = 32 rows × 1024 bits; input vector = {:,} bits".format(
         summary["vector_region"]), fontsize=11)
-    inner_elements = summary["vector_region"] // summary["precision"]
-    model_macs = 32 * inner_elements * 8
-    theoretical = model_macs / 420
-    fig.text(.06, .235, "MAC comparison — single macro model, 8 vectors, {}-bit operands".format(
-        summary["precision"]), fontsize=14, weight="bold")
-    fig.text(.06, .200, "MACs = 32 × {} × 8 = {:,}     |     Cycles = 128 + 8 × (4 + 32) + 4 = 420".format(
-        inner_elements, model_macs), fontsize=12)
-    fig.text(.06, .165, "Theoretical MACs/cycle = {:,} / 420 = {:.2f}".format(
-        model_macs, theoretical), fontsize=14, color="#17324D")
-    comparisons = ["Module {}: {:.2f} measured / {:.2f} model = {:.2f}×".format(
-        m, summary["macs"][m] / cycles, theoretical, summary["macs"][m] / cycles / theoretical)
-        for m in modules]
-    fig.text(.06, .130, "    |    ".join(comparisons), fontsize=11)
-    fig.text(.06, .098, "Notes", fontsize=10, weight="bold", color="#53657B")
-    fig.text(.06, .030,
-             "• The model excludes transfers into input/weight FIFOs and output-memory writes; measured cycles include them.",
-             fontsize=9, color="#53657B")
+    macro_counts = summary["observed_by_macro"][modules[0]]
+    fig.text(.06, .235, "Two-macro module timing summary", fontsize=14, weight="bold")
+    fig.text(.06, .200, "Measured module MACs/cycle = {:.4f}".format(
+        summary["macs"][modules[0]] / cycles), fontsize=12)
+    fig.text(.06, .165, "Completed tile-products: macro 1 = {}; macro 2 = {}".format(
+        macro_counts.get(1, 0), macro_counts.get(2, 0)), fontsize=12)
     fig.savefig(str(path), dpi=200, facecolor=fig.get_facecolor())
     plt.close(fig)
 
@@ -225,7 +228,7 @@ def plot_timeline(path, intervals, tile_starts, last_cycle, start=0, end=None, s
     end = last_cycle if end is None else end
     if not 0 <= start <= end <= last_cycle:
         raise ValueError("Plot range must satisfy 0 <= start <= end <= {}".format(last_cycle))
-    fig, axes = plt.subplots(4, 1, sharex=True, figsize=(18, 10))
+    fig, axes = plt.subplots(2, 1, sharex=True, figsize=(18, 7))
     for ax, key in zip(axes, MACROS):
         for lane, (action, color) in enumerate(zip(ACTIVITIES, COLORS)):
             windows = [(lo, hi - lo + 1) for lo, hi in intervals[key][action]]
@@ -285,7 +288,7 @@ def main():
     plot_timeline(plot_path, intervals, flags, last_cycle, args.start, args.end, args.show)
     write_csv(csv_path, data, flags)
     plot_summary(summary_path, summary)
-    print("Covered cycles 0..{} for all four macros".format(last_cycle))
+    print("Covered cycles 0..{} for both macros".format(last_cycle))
     print("Source: {}\nData: {}\nPlot: {}".format(args.report, csv_path, plot_path))
     print("Summary: {}".format(summary_path))
 

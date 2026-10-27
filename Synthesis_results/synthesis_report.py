@@ -167,9 +167,7 @@ def area_chart(groups, total, title, unit, output):
         detail.text(0.98, y, f'{value:,.4f} {unit}  |  {value / total:.2%}',
                     transform=detail.transAxes, va='center', ha='right', fontsize=10)
     fig.suptitle(title, fontsize=20, weight='bold')
-    fig.text(0.5, 0.025, 'Percentages of total cell area; exclusive local areas avoid double counting.',
-             ha='center', fontsize=10, color='#526079')
-    fig.subplots_adjust(top=0.86, bottom=0.12, wspace=0.08)
+    fig.subplots_adjust(top=0.86, bottom=0.06, wspace=0.08)
     save_figure(fig, output)
 
 
@@ -247,8 +245,7 @@ def generate(output, frequency, area, paths, sources, area_unit, time_unit):
                ['Macros / total cell area', f"{area['macro_percent']:.2f}%"],
                ['Buffer / inverter area (included in combinational)', f"{area['buffer_inverter_area']:,.6f} {area_unit}"]]
     text_table(f'Area summary · {frequency}', ['Quantity', 'Value'], summary,
-               output / 'area_summary.png', [60, 55],
-               note='Component charts separate FIFOs, accumulators and macros from other logic.')
+               output / 'area_summary.png', [60, 55])
     timing_chart(paths, time_unit, output / 'timing.png', frequency)
     # Remove stale detail pages only after rendering the new input summary successfully.
     for old in output.glob('timing_path_*.png'):

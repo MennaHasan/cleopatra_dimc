@@ -77,7 +77,7 @@ def plot_results(csv_path, output):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from matplotlib.ticker import MaxNLocator
+    from matplotlib.ticker import MaxNLocator, FormatStrFormatter
 
     with Path(csv_path).open(newline="") as source:
         reader = csv.DictReader(source)
@@ -118,12 +118,19 @@ def plot_results(csv_path, output):
                     color="#2563eb", linewidth=1.4, alpha=0.8)
         ax.scatter(x_values, throughput, s=40, color="#2563eb", marker="o",
                    alpha=0.8, edgecolors="white", linewidths=0.4, zorder=3)
+        for x_value, rate in zip(x_values, throughput):
+            ax.annotate("{:.2f}".format(rate), (x_value, rate), xytext=(0, 6),
+                        textcoords="offset points", ha="center", va="bottom",
+                        fontsize=8, color="#1d4ed8",
+                        bbox=dict(facecolor="white", edgecolor="none", alpha=0.8, pad=0.4))
         ax.set_xlabel("{} (tile count)".format(dimension.upper()))
         ax.set_ylabel("Measured MACs/cycle per module")
         ax.set_title("{} versus MACs/cycle\nFixed: {}=1, {}=1".format(
             dimension.upper(), fixed[0].upper(), fixed[1].upper()), fontsize=17, weight="bold")
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.set_ylim(bottom=0)
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=8))
+        ax.yaxis.set_major_formatter(FormatStrFormatter("%.1f"))
+        ax.set_ylim(0, max(throughput, default=1) * 1.15)
         ax.grid(alpha=0.25)
         ax.set_axisbelow(True)
         fig.subplots_adjust(left=0.09, right=0.98, top=0.84, bottom=0.13)
@@ -137,6 +144,7 @@ def plot_results(csv_path, output):
         ("l", "#0d9488", "--", 3.2, "s", 8, 4),
         ("q", "#ea580c", ":", 1.8, "^", 4.5, 5),
     )
+    label_offsets = {"k": 12, "l": 24, "q": -12}
     for dimension, color, style, width, marker, marker_size, order in sweep_styles:
         fixed = tuple(name for name in dimensions if name != dimension)
         experiments = [row for row in rows if all(row[name] == 1 for name in fixed)]
@@ -156,17 +164,30 @@ def plot_results(csv_path, output):
                     dimension.upper(), fixed[0].upper(), fixed[1].upper()))
         ax.scatter(sizes, rates, edgecolors=color, facecolors="none", marker=marker,
                    s=marker_size ** 2, linewidths=1.4, zorder=order + 0.1)
+        for size, rate in zip(sizes, rates):
+            ax.annotate("{:.2f}".format(rate), (size, rate),
+                        xytext=(0, label_offsets[dimension]), textcoords="offset points",
+                        ha="center", va="center", fontsize=7, color=color,
+                        bbox=dict(facecolor="white", edgecolor="none", alpha=0.8, pad=0.3))
     # Keep older/custom CSV combinations visible without connecting unrelated runs.
     mixed = [row for row in rows if sum(row[name] != 1 for name in dimensions) > 1]
     if mixed:
-        ax.scatter([row["k"] * row["l"] * row["q"] for row in mixed],
-                   [row["macs_per_module"] / row["elapsed_cycles"] for row in mixed],
+        mixed_sizes = [row["k"] * row["l"] * row["q"] for row in mixed]
+        mixed_rates = [row["macs_per_module"] / row["elapsed_cycles"] for row in mixed]
+        ax.scatter(mixed_sizes, mixed_rates,
                    color="#64748b", marker="x", label="Other combinations")
+        for size, rate in zip(mixed_sizes, mixed_rates):
+            ax.annotate("{:.2f}".format(rate), (size, rate), xytext=(0, 8),
+                        textcoords="offset points", ha="center", va="bottom",
+                        fontsize=7, color="#64748b")
     ax.set_xlabel("Workload size (K × L × Q)")
     ax.set_ylabel("Measured MACs/cycle per module")
     ax.set_title("K × L × Q versus MACs/cycle", fontsize=17, weight="bold")
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.set_ylim(bottom=0)
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=8))
+    ax.yaxis.set_major_formatter(FormatStrFormatter("%.1f"))
+    all_rates = [row["macs_per_module"] / row["elapsed_cycles"] for row in rows]
+    ax.set_ylim(0, max(all_rates, default=1) * 1.15)
     ax.grid(alpha=0.25)
     ax.set_axisbelow(True)
     ax.legend(handlelength=4)

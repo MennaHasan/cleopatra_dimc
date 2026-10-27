@@ -206,10 +206,6 @@ def plot_summary(path, summary):
         m, summary["macs"][m] / cycles, theoretical, summary["macs"][m] / cycles / theoretical)
         for m in modules]
     fig.text(.06, .130, "    |    ".join(comparisons), fontsize=11)
-    fig.text(.06, .098, "Notes", fontsize=10, weight="bold", color="#53657B")
-    fig.text(.06, .030,
-             "• The model excludes transfers into input/weight FIFOs and output-memory writes; measured cycles include them.",
-             fontsize=9, color="#53657B")
     fig.savefig(str(path), dpi=200, facecolor=fig.get_facecolor())
     plt.close(fig)
 

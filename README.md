@@ -78,3 +78,18 @@ to Preview the selected sizes without running simulations:
 ```bash
 python3 timing_analysis/run_experiments.py --dry-run
 ```
+### 7. Get synthesis results 
+#### Step 3
+```bash
+cd cleopatra_gf22
+make tech_init
+make synthesis
+```
+
+#### Step 2
+copy results files and name them 11_area_{f}.rpt, 11_timing_{f}.rpt, 11_area.rpt to folder Synthesis_resutls 
+
+#### Step 3
+```bash
+python3 Synthesis_results/synthesis_report.py
+```

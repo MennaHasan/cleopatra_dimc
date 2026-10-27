@@ -78,6 +78,25 @@ def plot_results(csv_path, output):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.ticker import MaxNLocator
+    from matplotlib.ticker import FormatStrFormatter
+
+    def label_points(ax, x_values, y_values, font_size=8, seen=None):
+        """Print each measured rate beside its marker, separating duplicates."""
+        if seen is None:
+            seen = defaultdict(int)
+        for x_value, y_value in zip(x_values, y_values):
+            key = (x_value, y_value)
+            occurrence = seen[key]
+            seen[key] += 1
+            offset = 7 + 9 * (occurrence // 2)
+            if occurrence % 2:
+                offset = -offset
+            ax.annotate("{:.2f}".format(y_value), (x_value, y_value),
+                        xytext=(0, offset), textcoords="offset points",
+                        ha="center", va="bottom" if offset > 0 else "top",
+                        fontsize=font_size, color="#334155",
+                        bbox={"boxstyle": "round,pad=0.12", "fc": "white",
+                              "ec": "none", "alpha": 0.75}, zorder=5)
 
     with Path(csv_path).open(newline="") as source:
         reader = csv.DictReader(source)
@@ -118,11 +137,13 @@ def plot_results(csv_path, output):
                     color="#2563eb", linewidth=1.4, alpha=0.8)
         ax.scatter(x_values, throughput, s=40, color="#2563eb", marker="o",
                    alpha=0.8, edgecolors="white", linewidths=0.4, zorder=3)
+        label_points(ax, x_values, throughput)
         ax.set_xlabel("{} (tile count)".format(dimension.upper()))
         ax.set_ylabel("Measured MACs/cycle per module")
         ax.set_title("{} versus MACs/cycle\nFixed: {}=1, {}=1".format(
             dimension.upper(), fixed[0].upper(), fixed[1].upper()), fontsize=17, weight="bold")
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
         ax.set_ylim(0, max(throughput, default=1) * 1.15)
         ax.grid(alpha=0.25)
         ax.set_axisbelow(True)
@@ -137,6 +158,7 @@ def plot_results(csv_path, output):
         ("l", "#0d9488", "--", 3.2, "s", 8, 4),
         ("q", "#ea580c", ":", 1.8, "^", 4.5, 5),
     )
+    label_seen = defaultdict(int)
     for dimension, color, style, width, marker, marker_size, order in sweep_styles:
         fixed = tuple(name for name in dimensions if name != dimension)
         experiments = [row for row in rows if all(row[name] == 1 for name in fixed)]
@@ -156,16 +178,20 @@ def plot_results(csv_path, output):
                     dimension.upper(), fixed[0].upper(), fixed[1].upper()))
         ax.scatter(sizes, rates, edgecolors=color, facecolors="none", marker=marker,
                    s=marker_size ** 2, linewidths=1.4, zorder=order + 0.1)
+        label_points(ax, sizes, rates, font_size=7, seen=label_seen)
     # Keep older/custom CSV combinations visible without connecting unrelated runs.
     mixed = [row for row in rows if sum(row[name] != 1 for name in dimensions) > 1]
     if mixed:
-        ax.scatter([row["k"] * row["l"] * row["q"] for row in mixed],
-                   [row["macs_per_module"] / row["elapsed_cycles"] for row in mixed],
+        mixed_sizes = [row["k"] * row["l"] * row["q"] for row in mixed]
+        mixed_rates = [row["macs_per_module"] / row["elapsed_cycles"] for row in mixed]
+        ax.scatter(mixed_sizes, mixed_rates,
                    color="#64748b", marker="x", label="Other combinations")
+        label_points(ax, mixed_sizes, mixed_rates, font_size=7, seen=label_seen)
     ax.set_xlabel("Workload size (K × L × Q)")
     ax.set_ylabel("Measured MACs/cycle per module")
     ax.set_title("K × L × Q versus MACs/cycle", fontsize=17, weight="bold")
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
     all_rates = [row["macs_per_module"] / row["elapsed_cycles"] for row in rows]
     ax.set_ylim(0, max(all_rates, default=1) * 1.15)
     ax.grid(alpha=0.25)

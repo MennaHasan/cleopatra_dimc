@@ -2,7 +2,8 @@
 
 Default: 58 distinct experiments across three controlled sweeps:
 Q=1..20 with K=L=1; L=1..20 with K=Q=1; K=1..20 with L=Q=1.
-The shared K=L=Q=1 baseline is run once.
+The shared K=L=Q=1 baseline is run once. It also runs 30 random configurations
+with K, L and Q selected from 5..30; the random results use their own CSV and plots.
 Use --k K --l L --q Q for a single custom experiment.
 Dimensions are passed at runtime; source defaults are never rewritten.
 
@@ -15,7 +16,8 @@ Analyze a different saved CSV:
 
 Both modes produce four PNGs: K, L and Q versus MACs/cycle with the other
 two dimensions fixed at 1, plus a K × L × Q versus MACs/cycle comparison.
-New runs write results.csv and these PNGs directly in timing_analysis/results/;
+New runs write results.csv and results_random.csv, each with its own four PNGs,
+directly in timing_analysis/results/;
 logs, timing reports and stimuli go in timing_analysis/run_<id>/ beside results/.
 """
 
@@ -73,7 +75,7 @@ def plot_paths(output):
 
 
 def plot_results(csv_path, output):
-    """Generate the four controlled-sweep throughput plots from a saved CSV."""
+    """Generate the four throughput plots from a saved experiment CSV."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -100,10 +102,14 @@ def plot_results(csv_path, output):
     dimensions = ("k", "l", "q")
     for dimension, destination in zip(dimensions, outputs):
         fixed = tuple(name for name in dimensions if name != dimension)
-        selected_rows = [row for row in rows if all(row[name] == 1 for name in fixed)]
+        controlled_rows = [row for row in rows if all(row[name] == 1 for name in fixed)]
+        # Controlled sweeps use their fixed-at-one subset. Random/custom datasets
+        # have no such subset, so plot every run against this dimension.
+        selected_rows = controlled_rows if controlled_rows else rows
         groups = defaultdict(list)
         for row in selected_rows:
-            groups[tuple(row[name] for name in fixed)].append(row)
+            group_key = tuple(row[name] for name in fixed) if controlled_rows else None
+            groups[group_key].append(row)
         fig, ax = plt.subplots(figsize=(14, 6.5))
         palette = plt.get_cmap("tab20")
         if not selected_rows:
@@ -113,8 +119,9 @@ def plot_results(csv_path, output):
             color = palette(index % 20)
             marker = ("o", "s", "^", "D")[(index // 20) % 4]
             style = ("-", "--", "-.", ":")[(index // 20) % 4]
-            label = ", ".join("{}={}".format(name.upper(), value)
-                              for name, value in zip(fixed, fixed_values))
+            label = (", ".join("{}={}".format(name.upper(), value)
+                               for name, value in zip(fixed, fixed_values))
+                     if fixed_values is not None else "Random configurations")
             experiments.sort(key=lambda row: row[dimension])
             x_values = [row[dimension] for row in experiments]
             throughput = [row["macs_per_module"] / row["elapsed_cycles"] for row in experiments]
@@ -136,8 +143,10 @@ def plot_results(csv_path, output):
                             bbox=dict(facecolor="white", edgecolor="none", alpha=0.75, pad=0.4))
         ax.set_xlabel("{} (tile count)".format(dimension.upper()))
         ax.set_ylabel("Measured MACs/cycle per module")
-        ax.set_title("{} versus MACs/cycle\nFixed: {}=1, {}=1".format(
-            dimension.upper(), fixed[0].upper(), fixed[1].upper()), fontsize=17, weight="bold")
+        title_detail = ("Fixed: {}=1, {}=1".format(fixed[0].upper(), fixed[1].upper())
+                        if controlled_rows else "Other dimensions vary")
+        ax.set_title("{} versus MACs/cycle\n{}".format(
+            dimension.upper(), title_detail), fontsize=17, weight="bold")
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.yaxis.set_major_locator(MaxNLocator(nbins=8))
         ax.yaxis.set_major_formatter(FormatStrFormatter("%.1f"))
@@ -218,6 +227,54 @@ def plot_all_results(csv_path, output):
     return plots
 
 
+def run_plan(plan, precision, output, csv_path, plot_prefix, used_names=None):
+    """Run one plan, save its CSV, and plot its completed runs."""
+    output.mkdir(parents=True)
+    used_names = used_names if used_names is not None else {}
+    with Path(csv_path).open("w", newline="") as destination:
+        writer = csv.DictWriter(destination, fieldnames=FIELDS)
+        writer.writeheader()
+        destination.flush()
+        try:
+            for (k, l, q), seeds in plan:
+                name = "k{}_l{}_q{}".format(k, l, q)
+                used_names[name] = used_names.get(name, 0) + 1
+                occurrence = used_names[name]
+                if occurrence > 1:
+                    name += "_repeat{}".format(occurrence)
+                experiment = output / name
+                experiment.mkdir()
+                for module, seed in enumerate(seeds, 1):
+                    stim = experiment / "module_{}".format(module)
+                    execute([sys.executable, str(ROOT / "stimuli/double_buffering_stim.py"),
+                             "--k", str(k), "--l", str(l), "--q", str(q), "--precision", str(precision), "--seed", str(seed),
+                             "--outdir", str(stim)], experiment / "stimulus_{}.log".format(module))
+                execute(["vsim", "-c", "-voptargs=+acc", "-l", str(experiment / "simulation.log"),
+                         "-lib", "sim/work", "tb_dimc_top", "+TEST=1", "+MATRIX_K={}".format(k),
+                         "+MATRIX_L={}".format(l), "+MATRIX_Q={}".format(q),
+                         "+PRECISION={}".format(precision),
+                         "+STIM_DIR_1={}".format(experiment / "module_1"),
+                         "+STIM_DIR_2={}".format(experiment / "module_2"),
+                         "+TIMING_REPORT_DIR={}".format(experiment),
+                         "-do", "do scripts/run_top.tcl"], experiment / "simulation.stdout")
+                report = experiment / "timing_report_1.txt"
+                row = collect_result(report, k, l, q, seeds, precision)
+                writer.writerow(row)
+                destination.flush()
+                print("Completed: K={}, L={}, Q={}; {:,} MACs/module; {:,} cycles; "
+                      "{:.4f} MACs/cycle/module".format(
+                          k, l, q, row["macs_per_module"], row["elapsed_cycles"],
+                          row["macs_per_module"] / row["elapsed_cycles"]), flush=True)
+        finally:
+            # Keep completed results and plots if a later run in this plan fails.
+            destination.flush()
+            with Path(csv_path).open() as source:
+                completed = list(csv.DictReader(source))
+            if completed:
+                plot_all_results(csv_path, plot_prefix)
+    print("Results: {}".format(csv_path))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for dimension in ("k", "l", "q"):
@@ -252,24 +309,36 @@ def main():
         sizes.extend((1, l, 1) for l in range(2, 21))
         sizes.extend((k, 1, 1) for k in range(2, 21))
     used_seeds = set()
-    plan = []
-    for index, size in enumerate(sizes, 1):
-        seeds = []
-        while len(seeds) < 2:
-            seed = rng.randrange(1, 2**31)
-            if seed not in used_seeds:
-                used_seeds.add(seed)
-                seeds.append(seed)
-        plan.append((size, seeds))
-        print("Experiment {}/{}: K={}, L={}, Q={}; module seeds {} / {}".format(
-            index, len(sizes), *size, *seeds))
+
+    def make_plan(configurations):
+        plan = []
+        for size in configurations:
+            seeds = []
+            while len(seeds) < 2:
+                seed = rng.randrange(1, 2**31)
+                if seed not in used_seeds:
+                    used_seeds.add(seed)
+                    seeds.append(seed)
+            plan.append((size, seeds))
+        return plan
+
+    plan = make_plan(sizes)
+    random_sizes = rng.sample([(k, l, q) for k in range(5, 31)
+                               for l in range(5, 31) for q in range(5, 31)], 30)
+    random_plan = make_plan(random_sizes)
+    for index, (size, seeds) in enumerate(plan, 1):
+        print("Current experiment {}/{}: K={}, L={}, Q={}; module seeds {} / {}".format(
+            index, len(plan), *size, *seeds))
+    for index, (size, seeds) in enumerate(random_plan, 1):
+        print("Random experiment {}/{}: K={}, L={}, Q={}; module seeds {} / {}".format(
+            index, len(random_plan), *size, *seeds))
     if args.dry_run:
         return
     for tool in ("vsim",) if args.skip_compile else ("make", "vsim", "vlib"):
         if shutil.which(tool) is None:
             parser.error("{} is not on PATH; run in your Questa/Bender environment".format(tool))
-    # Keep per-run simulation artifacts isolated; publish the latest CSV/PNGs
-    # directly in results so --plot-only uses the latest experiment data.
+    # Keep per-run simulation artifacts isolated; preserve separate datasets
+    # and plot families for the controlled and random experiments.
     results_dir = ROOT / "timing_analysis" / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
     output = args.output_dir or results_dir.parent / datetime.now().strftime("run_%Y%m%d_%H%M%S_%f")
@@ -277,49 +346,10 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     if not args.skip_compile:
         execute(["make", "hw-compile"], output / "compile.log")
-    csv_path = results_dir / "results.csv"
-    with csv_path.open("w", newline="") as destination:
-        writer = csv.DictWriter(destination, fieldnames=FIELDS)
-        writer.writeheader()
-        destination.flush()
-        directory_counts = {}
-        try:
-            for (k, l, q), seeds in plan:
-                name = "k{}_l{}_q{}".format(k, l, q)
-                directory_counts[name] = directory_counts.get(name, 0) + 1
-                occurrence = directory_counts[name]
-                if occurrence > 1:
-                    name += "_repeat{}".format(occurrence)
-                experiment = output / name
-                experiment.mkdir()
-                for module, seed in enumerate(seeds, 1):
-                    stim = experiment / "module_{}".format(module)
-                    execute([sys.executable, str(ROOT / "stimuli/double_buffering_stim.py"),
-                             "--k", str(k), "--l", str(l), "--q", str(q), "--precision", str(args.precision), "--seed", str(seed),
-                             "--outdir", str(stim)], experiment / "stimulus_{}.log".format(module))
-                execute(["vsim", "-c", "-voptargs=+acc", "-l", str(experiment / "simulation.log"),
-                         "-lib", "sim/work", "tb_dimc_top", "+TEST=1", "+MATRIX_K={}".format(k),
-                         "+MATRIX_L={}".format(l), "+MATRIX_Q={}".format(q),
-                         "+PRECISION={}".format(args.precision),
-                         "+STIM_DIR_1={}".format(experiment / "module_1"),
-                         "+STIM_DIR_2={}".format(experiment / "module_2"),
-                         "+TIMING_REPORT_DIR={}".format(experiment),
-                         "-do", "do scripts/run_top.tcl"], experiment / "simulation.stdout")
-                report = experiment / "timing_report_1.txt"
-                row = collect_result(report, k, l, q, seeds, args.precision)
-                writer.writerow(row)
-                destination.flush()
-                print("Completed: {:,} MACs/module; {:,} cycles; {:.4f} MACs/cycle/module".format(
-                    row["macs_per_module"], row["elapsed_cycles"],
-                    row["macs_per_module"] / row["elapsed_cycles"]), flush=True)
-        finally:
-            # Preserve and plot all completed runs even if a later run fails.
-            destination.flush()
-            with csv_path.open() as source:
-                completed = list(csv.DictReader(source))
-            if completed:
-                plot_all_results(csv_path, results_dir / "results.png")
-    print("Results: {}".format(csv_path))
+    run_plan(plan, args.precision, output / "current", results_dir / "results.csv",
+             results_dir / "results.png")
+    run_plan(random_plan, args.precision, output / "random", results_dir / "results_random.csv",
+             results_dir / "results_random.png")
 
 
 if __name__ == "__main__":

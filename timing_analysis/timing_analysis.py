@@ -198,8 +198,6 @@ def plot_summary(path, summary):
         summary["macs"][modules[0]] / cycles), fontsize=12)
     fig.text(.06, .165, "Completed tile computations: {}    |    Weight tile loads: {}".format(
         summary["observed"][modules[0]], summary["weight_loads"][modules[0]]), fontsize=12)
-    fig.text(.06, .098, "Measured cycles include streamer transfers and memory stalls.",
-             fontsize=10, color="#53657B")
     fig.savefig(str(path), dpi=200, facecolor=fig.get_facecolor())
     plt.close(fig)
 

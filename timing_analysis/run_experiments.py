@@ -101,58 +101,32 @@ def plot_results(csv_path, output):
     for dimension, destination in zip(dimensions, outputs):
         fixed = tuple(name for name in dimensions if name != dimension)
         selected_rows = [row for row in rows if all(row[name] == 1 for name in fixed)]
-        groups = defaultdict(list)
-        for row in selected_rows:
-            groups[tuple(row[name] for name in fixed)].append(row)
-        legend_columns = min(4, max(1, len(groups)))
-        legend_rows = (len(groups) + legend_columns - 1) // legend_columns
-        legend_height = legend_rows * 0.24
-        height = 6.5 + legend_height
-        fig, ax = plt.subplots(figsize=(14, height))
-        palette = plt.get_cmap("tab20")
+        fig, ax = plt.subplots(figsize=(14, 6.5))
         if not selected_rows:
             ax.text(0.5, 0.5, "No completed experiments with {}=1 and {}=1".format(
                 fixed[0].upper(), fixed[1].upper()), transform=ax.transAxes, ha="center")
-        for index, (fixed_values, experiments) in enumerate(sorted(groups.items())):
-            color = palette(index % 20)
-            marker = ("o", "s", "^", "D")[(index // 20) % 4]
-            style = ("-", "--", "-.", ":")[(index // 20) % 4]
-            label = ", ".join("{}={}".format(name.upper(), value)
-                              for name, value in zip(fixed, fixed_values))
-            experiments.sort(key=lambda row: row[dimension])
-            x_values = [row[dimension] for row in experiments]
-            throughput = [row["macs_per_module"] / row["elapsed_cycles"] for row in experiments]
-            # Preserve every measured point. Only connect experiments with identical
-            # values for the other two dimensions; average repeats at the same x.
-            by_x = defaultdict(list)
-            for x_value, rate in zip(x_values, throughput):
-                by_x[x_value].append(rate)
-            if len(by_x) > 1:
-                x_line = sorted(by_x)
-                ax.plot(x_line, [sum(by_x[x]) / len(by_x[x]) for x in x_line],
-                        color=color, linestyle=style, linewidth=1.4, alpha=0.8)
-            ax.scatter(x_values, throughput, s=40, color=color, marker=marker,
-                       alpha=0.8, edgecolors="white", linewidths=0.4, label=label, zorder=3)
+        selected_rows.sort(key=lambda row: row[dimension])
+        x_values = [row[dimension] for row in selected_rows]
+        throughput = [row["macs_per_module"] / row["elapsed_cycles"] for row in selected_rows]
+        # Preserve measured points and connect means of repeated x values.
+        by_x = defaultdict(list)
+        for x_value, rate in zip(x_values, throughput):
+            by_x[x_value].append(rate)
+        if len(by_x) > 1:
+            x_line = sorted(by_x)
+            ax.plot(x_line, [sum(by_x[x]) / len(by_x[x]) for x in x_line],
+                    color="#2563eb", linewidth=1.4, alpha=0.8)
+        ax.scatter(x_values, throughput, s=40, color="#2563eb", marker="o",
+                   alpha=0.8, edgecolors="white", linewidths=0.4, zorder=3)
         ax.set_xlabel("{} (tile count)".format(dimension.upper()))
         ax.set_ylabel("Measured MACs/cycle per module")
-        ax.set_title("{} versus MACs/cycle — each curve fixes {} and {}".format(
+        ax.set_title("{} versus MACs/cycle\nFixed: {}=1, {}=1".format(
             dimension.upper(), fixed[0].upper(), fixed[1].upper()), fontsize=17, weight="bold")
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.set_ylim(bottom=0)
+        ax.set_ylim(0, max(throughput, default=1) * 1.15)
         ax.grid(alpha=0.25)
         ax.set_axisbelow(True)
-        handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.65 / height),
-                   ncol=legend_columns, fontsize=9, frameon=False,
-                   title="Fixed ({}, {}) values".format(fixed[0].upper(), fixed[1].upper()))
-        note = ("Follow a curve to vary only {0}; compare points at the same {0} across legend entries "
-                "to compare different {1}/{2} combinations.\n"
-                "Points are measured runs; lines connect means of repeats. "
-                "A single-point group has no measured sweep. {3} experiments.").format(
-                    dimension.upper(), fixed[0].upper(), fixed[1].upper(), len(selected_rows))
-        fig.text(0.5, 0.015, note, ha="center", va="bottom", fontsize=9, color="#526079")
-        fig.subplots_adjust(left=0.09, right=0.98, top=0.91,
-                            bottom=(legend_height + 1.25) / height)
+        fig.subplots_adjust(left=0.09, right=0.98, top=0.84, bottom=0.13)
         fig.savefig(str(destination), dpi=200, facecolor="white")
         plt.close(fig)
     fig, ax = plt.subplots(figsize=(11, 6))
@@ -192,14 +166,12 @@ def plot_results(csv_path, output):
     ax.set_ylabel("Measured MACs/cycle per module")
     ax.set_title("K × L × Q versus MACs/cycle", fontsize=17, weight="bold")
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.set_ylim(bottom=0)
+    all_rates = [row["macs_per_module"] / row["elapsed_cycles"] for row in rows]
+    ax.set_ylim(0, max(all_rates, default=1) * 1.15)
     ax.grid(alpha=0.25)
     ax.set_axisbelow(True)
     ax.legend(handlelength=4)
-    fig.text(0.5, 0.025, "Solid/dashed/dotted curves and nested hollow markers expose overlaps; values are not shifted.\n"
-             "The shared (1, 1, 1) baseline is used by all three sweep curves.",
-             ha="center", fontsize=9, color="#526079")
-    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    fig.tight_layout()
     fig.savefig(str(outputs[-1]), dpi=200, facecolor="white")
     plt.close(fig)
     return outputs

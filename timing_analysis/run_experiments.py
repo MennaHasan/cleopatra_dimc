@@ -1,4 +1,4 @@
-"""Run independent Test 1 experiments and collect per-module MACs and cycles.
+"""Run single-macro Test 1 experiments and collect MACs and cycles.
 
 Default: 58 distinct experiments across three controlled sweeps:
 Q=1..20 with K=L=1; L=1..20 with K=Q=1; K=1..20 with L=Q=1.
@@ -34,7 +34,7 @@ from timing_analysis import read_summary
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FIELDS = ("k", "l", "q", "precision", "module_1_seed", "module_2_seed",
+FIELDS = ("k", "l", "q", "precision", "stimulus_seed",
           "macs_per_module", "elapsed_cycles", "report")
 
 
@@ -51,16 +51,16 @@ def collect_result(report, k, l, q, seeds, precision=8):
     summary = read_summary(report)
     inner_elements = l * (1024 // precision)
     expected = (k * 32) * inner_elements * (q * 8)
-    for module in (1, 2):
-        sizes = summary["modules"].get(module, {})
-        if ("Kernel" not in sizes or "Input" not in sizes or "Output" not in sizes
-                or sizes["Kernel"][:2] != (k * 32, inner_elements)
-                or sizes["Input"][:2] != (inner_elements, q * 8)
-                or sizes["Output"][:2] != (k * 32, q * 8)
-                or sizes["Kernel"][3] != precision or sizes["Input"][3] != precision
-                or summary["macs"][module] != expected):
-            raise ValueError("Report dimensions/MACs do not match this experiment: {}".format(report))
-    return dict(zip(FIELDS, (k, l, q, precision, seeds[0], seeds[1], expected,
+    sizes = summary["modules"].get(1, {})
+    if (set(summary["modules"]) != {1}
+            or "Kernel" not in sizes or "Input" not in sizes or "Output" not in sizes
+            or sizes["Kernel"][:2] != (k * 32, inner_elements)
+            or sizes["Input"][:2] != (inner_elements, q * 8)
+            or sizes["Output"][:2] != (k * 32, q * 8)
+            or sizes["Kernel"][3] != precision or sizes["Input"][3] != precision
+            or summary["macs"][1] != expected):
+        raise ValueError("Report dimensions/MACs do not match this experiment: {}".format(report))
+    return dict(zip(FIELDS, (k, l, q, precision, seeds[0], expected,
                             summary["cycles"], str(report))))
 
 
@@ -250,15 +250,13 @@ def main():
     used_seeds = set()
     plan = []
     for index, size in enumerate(sizes, 1):
-        seeds = []
-        while len(seeds) < 2:
+        seed = rng.randrange(1, 2**31)
+        while seed in used_seeds:
             seed = rng.randrange(1, 2**31)
-            if seed not in used_seeds:
-                used_seeds.add(seed)
-                seeds.append(seed)
-        plan.append((size, seeds))
-        print("Experiment {}/{}: K={}, L={}, Q={}; module seeds {} / {}".format(
-            index, len(sizes), *size, *seeds))
+        used_seeds.add(seed)
+        plan.append((size, seed))
+        print("Experiment {}/{}: K={}, L={}, Q={}; stimulus seed {}".format(
+            index, len(sizes), *size, seed))
     if args.dry_run:
         return
     for tool in ("vsim",) if args.skip_compile else ("make", "vsim", "vlib"):
@@ -280,7 +278,7 @@ def main():
         destination.flush()
         directory_counts = {}
         try:
-            for (k, l, q), seeds in plan:
+            for (k, l, q), seed in plan:
                 name = "k{}_l{}_q{}".format(k, l, q)
                 directory_counts[name] = directory_counts.get(name, 0) + 1
                 occurrence = directory_counts[name]
@@ -288,21 +286,19 @@ def main():
                     name += "_repeat{}".format(occurrence)
                 experiment = output / name
                 experiment.mkdir()
-                for module, seed in enumerate(seeds, 1):
-                    stim = experiment / "module_{}".format(module)
-                    execute([sys.executable, str(ROOT / "stimuli/double_buffering_stim.py"),
-                             "--k", str(k), "--l", str(l), "--q", str(q), "--precision", str(args.precision), "--seed", str(seed),
-                             "--outdir", str(stim)], experiment / "stimulus_{}.log".format(module))
+                stim = experiment / "stimulus"
+                execute([sys.executable, str(ROOT / "stimuli/double_buffering_stim.py"),
+                         "--k", str(k), "--l", str(l), "--q", str(q), "--precision", str(args.precision), "--seed", str(seed),
+                         "--outdir", str(stim)], experiment / "stimulus.log")
                 execute(["vsim", "-c", "-voptargs=+acc", "-l", str(experiment / "simulation.log"),
                          "-lib", "sim/work", "tb_dimc_top", "+TEST=1", "+MATRIX_K={}".format(k),
                          "+MATRIX_L={}".format(l), "+MATRIX_Q={}".format(q),
                          "+PRECISION={}".format(args.precision),
-                         "+STIM_DIR_1={}".format(experiment / "module_1"),
-                         "+STIM_DIR_2={}".format(experiment / "module_2"),
+                         "+STIM_DIR_1={}".format(stim),
                          "+TIMING_REPORT_DIR={}".format(experiment),
                          "-do", "do scripts/run_top.tcl"], experiment / "simulation.stdout")
                 report = experiment / "timing_report_1.txt"
-                row = collect_result(report, k, l, q, seeds, args.precision)
+                row = collect_result(report, k, l, q, (seed,), args.precision)
                 writer.writerow(row)
                 destination.flush()
                 print("Completed: {:,} MACs/module; {:,} cycles; {:.4f} MACs/cycle/module".format(

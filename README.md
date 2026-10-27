@@ -32,11 +32,14 @@ make sim-top STIM_SEED=20261007
 
 ### 4. To use Questasim GUI and add signals innside it
 
-#### To use GUI: 
+#### To use GUI:
+
 ```bash
 make sim-cleopatra GUI=1
 ```
-#### Adding signals 
+
+#### Adding signals
+
 ```tcl
 restart -f
 env tb_cleopatra
@@ -45,7 +48,8 @@ add wave sim:/tb_cleopatra/i_dut/READYN
 add wave sim:/tb_cleopatra/i_dut/out_data
 ```
 
-#### Running simulation 
+#### Running simulation
+
 ```tcl
 run -all
 ```
@@ -64,6 +68,7 @@ python3 timing_analysis/run_experiments.py
 ```
 
 to run the plots on the same csv results file
+
 ```bash
 python3 timing_analysis/run_experiments.py --plot-only
 ```

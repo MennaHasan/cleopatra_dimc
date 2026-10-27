@@ -17,17 +17,13 @@ sources:
     files:
       - cleopatra_gf22/sourcecode/tc_clk.sv
   - files:
-      - rtl/spatz_dimc_dual.sv
       - rtl/dimc_package.sv
-      - rtl/dimc_datapath.sv
       - rtl/dimc_hci_mux.sv
       - rtl/dimc_streamer.sv
       - rtl/dimc_ctrl.sv
-      - rtl/dimc_module.sv
       - rtl/dimc_top.sv
       - rtl/accumulator.sv
       - rtl/cleopatra_ctrl.sv
-      - rtl/cleopatra.sv
 
   - target: asic
     files:
@@ -36,10 +32,6 @@ sources:
 
   - target: tb
     files:
-      - tb/tb_dimc_dual.sv
-      - tb/tb_double_buffering.sv
       - tb/tb_spatz_dimc.sv
-      - tb/tb_dimc_datapath.sv
       - tb/tb_dimc_test1_timing.sv
       - tb/tb_dimc_top.sv
-      - tb/tb_cleopatra.sv

@@ -1,4 +1,4 @@
-"""Extract inclusive activity windows and plot four DIMC macros.
+"""Extract inclusive activity windows and plot the single DIMC macro.
 
 Usage: python3 timing_analysis/timing_analysis.py timing_analysis/timing_report_1.txt
 Add --start/--end to zoom, or --show to open an interactive matplotlib window.
@@ -7,7 +7,7 @@ repeated outputs add a version suffix. This script never creates TXT reports.
 Each run also creates a separate summary PNG for the full experiment.
 The input TXT report is preserved unchanged.
 Intervals describe reported windows, including any stalls inside those windows.
-FIFO activity is attributed to its destination macro; the FIFO is shared.
+The report and plots describe module 1, macro 1.
 """
 
 import argparse
@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 
 
-MACROS = ((1, 1), (1, 2), (2, 3), (2, 4))
+MACROS = ((1, 1),)
 ACTIVITIES = ("WEIGHT LOAD", "VECTOR LOAD TO FIFO", "VECTOR LOAD TO MACRO", "COMPUTE")
 COLORS = ("#2374AB", "#00A896", "#FF6500", "#459544")
 EVENT = re.compile(
@@ -193,23 +193,13 @@ def plot_summary(path, summary):
             cell.set_text_props(color="white", weight="bold")
     fig.text(.06, .275, "Macro capacity: weights = 32 rows × 1024 bits; input vector = {:,} bits".format(
         summary["vector_region"]), fontsize=11)
-    inner_elements = summary["vector_region"] // summary["precision"]
-    model_macs = 32 * inner_elements * 8
-    theoretical = model_macs / 420
-    fig.text(.06, .235, "MAC comparison — single macro model, 8 vectors, {}-bit operands".format(
-        summary["precision"]), fontsize=14, weight="bold")
-    fig.text(.06, .200, "MACs = 32 × {} × 8 = {:,}     |     Cycles = 128 + 8 × (4 + 32) + 4 = 420".format(
-        inner_elements, model_macs), fontsize=12)
-    fig.text(.06, .165, "Theoretical MACs/cycle = {:,} / 420 = {:.2f}".format(
-        model_macs, theoretical), fontsize=14, color="#17324D")
-    comparisons = ["Module {}: {:.2f} measured / {:.2f} model = {:.2f}×".format(
-        m, summary["macs"][m] / cycles, theoretical, summary["macs"][m] / cycles / theoretical)
-        for m in modules]
-    fig.text(.06, .130, "    |    ".join(comparisons), fontsize=11)
-    fig.text(.06, .098, "Notes", fontsize=10, weight="bold", color="#53657B")
-    fig.text(.06, .030,
-             "• The model excludes transfers into input/weight FIFOs and output-memory writes; measured cycles include them.",
-             fontsize=9, color="#53657B")
+    fig.text(.06, .235, "Single-macro timing summary", fontsize=14, weight="bold")
+    fig.text(.06, .200, "Measured MACs/cycle = {:.4f}".format(
+        summary["macs"][modules[0]] / cycles), fontsize=12)
+    fig.text(.06, .165, "Completed tile computations: {}    |    Weight tile loads: {}".format(
+        summary["observed"][modules[0]], summary["weight_loads"][modules[0]]), fontsize=12)
+    fig.text(.06, .098, "Measured cycles include streamer transfers and memory stalls.",
+             fontsize=10, color="#53657B")
     fig.savefig(str(path), dpi=200, facecolor=fig.get_facecolor())
     plt.close(fig)
 
@@ -225,7 +215,8 @@ def plot_timeline(path, intervals, tile_starts, last_cycle, start=0, end=None, s
     end = last_cycle if end is None else end
     if not 0 <= start <= end <= last_cycle:
         raise ValueError("Plot range must satisfy 0 <= start <= end <= {}".format(last_cycle))
-    fig, axes = plt.subplots(4, 1, sharex=True, figsize=(18, 10))
+    fig, axes = plt.subplots(1, 1, sharex=True, figsize=(18, 4))
+    axes = [axes]
     for ax, key in zip(axes, MACROS):
         for lane, (action, color) in enumerate(zip(ACTIVITIES, COLORS)):
             windows = [(lo, hi - lo + 1) for lo, hi in intervals[key][action]]
@@ -285,7 +276,7 @@ def main():
     plot_timeline(plot_path, intervals, flags, last_cycle, args.start, args.end, args.show)
     write_csv(csv_path, data, flags)
     plot_summary(summary_path, summary)
-    print("Covered cycles 0..{} for all four macros".format(last_cycle))
+    print("Covered cycles 0..{} for the single macro".format(last_cycle))
     print("Source: {}\nData: {}\nPlot: {}".format(args.report, csv_path, plot_path))
     print("Summary: {}".format(summary_path))
 

@@ -1,4 +1,4 @@
-// Numbered end-to-end tests for one DIMC module with two macros.
+// Numbered end-to-end tests for the single-macro DIMC top.
 // Every test sets up a job through the software interface and checks memory.
 // +TEST=N runs one numbered test; without it all tests run sequentially.
 `timescale 1ns/1ps
@@ -99,6 +99,41 @@ module tb_dimc_top;
   bit tests_passed=0;
   longint unsigned watchdog_cycles=500000;
   string test_name="initialization";
+  logic test1_timing_done;
+  bit test1_verified=0;
+  logic timing_weight_load, timing_input_push, timing_feature_load;
+  logic timing_compute_issue, timing_result_push, timing_output_grant;
+  logic [7:0] timing_weight_section;
+  logic [31:0] timing_compute_tile;
+  logic [2:0] timing_compute_vector;
+  logic [1:0] timing_feature_section;
+  logic [6:0] timing_compute_row;
+
+  assign timing_weight_load=i_dut.kernel_stream.valid && i_dut.kernel_stream.ready;
+  assign timing_input_push=i_dut.input_tcdm.r_valid && i_dut.input_tcdm.r_ready;
+  assign timing_feature_load=i_dut.input_stream.valid && i_dut.input_stream.ready;
+  assign timing_compute_issue=i_dut.macro_compe && !i_dut.macro_rcsn;
+  assign timing_result_push=i_dut.result_capture;
+  assign timing_output_grant=i_dut.output_tcdm.req && i_dut.output_tcdm.gnt;
+  assign timing_weight_section=i_dut.i_ctrl.weight_count_q;
+  assign timing_compute_tile=((i_dut.i_ctrl.k_q*i_dut.i_ctrl.q_size_q+
+                               i_dut.i_ctrl.q_q)*i_dut.i_ctrl.l_size_q+
+                              i_dut.i_ctrl.l_q+1);
+  assign timing_compute_vector=i_dut.i_ctrl.vector_q;
+  assign timing_feature_section=i_dut.i_ctrl.section_q;
+  assign timing_compute_row=i_dut.i_ctrl.row_q;
+
+  tb_dimc_test1_timing i_test1_timing (
+    .clk_i(clk), .rst_ni(rst_n), .enable_i(test_number==1), .verified_i(test1_verified),
+    .start_request_i(periph.req && periph.gnt && !periph.wen && periph.add==0),
+    .config_i(i_dut.config_), .weight_load_i(timing_weight_load),
+    .input_push_i(timing_input_push), .weight_section_i(timing_weight_section),
+    .compute_tile_i(timing_compute_tile), .compute_vector_i(timing_compute_vector),
+    .feature_load_i(timing_feature_load), .compute_issue_i(timing_compute_issue),
+    .feature_section_i(timing_feature_section), .compute_row_i(timing_compute_row),
+    .result_push_i(timing_result_push), .output_grant_i(timing_output_grant),
+    .done_o(test1_timing_done)
+  );
 
   // Test helpers only: report a failed check, drive the bus, prepare memory,
   // and compare output words.
@@ -195,6 +230,19 @@ module tb_dimc_top;
     end
   endtask
 
+  task automatic wait_memory_request(input int unsigned base, input int unsigned bytes,
+                                     input bit require_grant);
+    wait(memory[0].req && memory[0].add>=base &&
+         64'(memory[0].add)+32<=64'(base)+bytes &&
+         (!require_grant || memory[0].gnt));
+  endtask
+
+  task automatic check_memory_stalled(input int unsigned base, input int unsigned bytes);
+    check_condition(memory[0].req && !memory[0].gnt && memory[0].add>=base &&
+                    64'(memory[0].add)+32<=64'(base)+bytes,
+                    "Expected memory request was not held off");
+  endtask
+
   task automatic check_idle;
     logic [31:0] status;
     check_condition(!busy,"Controller still busy after completion");
@@ -239,6 +287,9 @@ module tb_dimc_top;
       check_results(matrix_k,matrix_q,"double_buffering_golden_matmul_output.txt");
     else
       check_results(matrix_k,matrix_q,$sformatf("double_buffering_golden_matmul_output_%0dbit.txt",matrix_precision));
+    check_condition(test1_timing_done,"Test 1 timing did not reach the final output write");
+    test1_verified=1;
+    @(negedge clk); // Let the timing observer publish the verified report.
     pass_test();
   endtask
   task automatic test_2;
@@ -258,8 +309,9 @@ module tb_dimc_top;
     configure(1,1,1);
     hold_input=1;
     start_job();
-    wait(i_dut.i_module.input_tcdm.req);
+    wait_memory_request(IBASE,input_bytes,0);
     repeat (20) @(negedge clk);
+    check_memory_stalled(IBASE,input_bytes);
     check_condition(busy && !evt[0][0],"Job completed while input memory was stalled");
     check_condition(input_count==0 && output_count==0,"Input stall allowed input reads or output writes");
     hold_input=0;
@@ -274,10 +326,11 @@ module tb_dimc_top;
     configure(1,1,1);
     hold_weight=1;
     start_job();
-    wait(i_dut.i_module.kernel_tcdm.req);
+    wait_memory_request(WBASE,weight_bytes,0);
     repeat (20) @(negedge clk);
+    check_memory_stalled(WBASE,weight_bytes);
     check_condition(busy && !evt[0][0],"Job completed while weight memory was stalled");
-    check_condition(output_count==0,"Weight stall allowed output writes");
+    check_condition(weight_count==0 && output_count==0,"Weight stall allowed weight reads or output writes");
     hold_weight=0;
     wait_completion();
     check_idle();
@@ -290,8 +343,9 @@ module tb_dimc_top;
     configure(1,1,1);
     hold_output=1;
     start_job();
-    wait(i_dut.i_module.output_tcdm.req);
+    wait_memory_request(OBASE,output_bytes,0);
     repeat (20) @(negedge clk);
+    check_memory_stalled(OBASE,output_bytes);
     check_condition(busy && !evt[0][0],"Job completed while output memory was stalled");
     check_condition(output_count==0,"Output stall allowed output writes");
     hold_output=0;
@@ -307,7 +361,7 @@ module tb_dimc_top;
     configure(4,3,2);
     response_delay=30; // Return memory read responses after 30 cycles.
     start_job();
-    wait(i_dut.i_module.input_tcdm.req && i_dut.i_module.input_tcdm.gnt);
+    wait_memory_request(IBASE,input_bytes,1);
     wr('h14,0); // Request shared abort/soft clear.
     wait_abort();
     repeat (8) @(negedge clk);

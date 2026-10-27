@@ -1,5 +1,5 @@
 /* HCI size and req/rsp struct types for the flat-port dimc_top_wrap.
- * Both modules expose the same 256-bit memory interface.
+ * The module exposes one 256-bit memory interface.
  * Port struct types are defined at package scope.
  */
 `include "hci_helpers.svh"

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Generate independent tiled stimuli for the double-buffering testbench."""
+"""Generate tiled stimuli and reference results for tb_dimc_top."""
 
 import argparse
 import random
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-# Full-matrix tile counts. Keep these aligned with tb_double_buffering.sv.
+# Full-matrix tile counts. Keep these aligned with tb_dimc_top.sv.
 K = 4
 L = 3
 Q = 2
@@ -200,8 +200,6 @@ def main() -> None:
     parser.add_argument("--q", type=int, default=Q, help="Input column tiles (8 columns each)")
     parser.add_argument("--precision", type=int, choices=(1, 2, 4, 8), default=8,
                         help="Precision for the full Test 1 golden (default: 8)")
-    parser.add_argument("--mask-test-goldens", action="store_true",
-                        help="Generate the cross-precision masked goldens for top Test 32")
     parser.add_argument(
         "--untile-only",
         action="store_true",
@@ -210,8 +208,6 @@ def main() -> None:
     args = parser.parse_args()
     if min(args.k, args.l, args.q) < 1:
         parser.error("k, l, and q must be positive")
-    if args.mask_test_goldens and args.l < 3:
-        parser.error("--mask-test-goldens requires at least three inner tiles (--l 3)")
     if args.untile_only and (args.k, args.l, args.q) != (K, L, Q):
         parser.error("--untile-only currently supports the default dimensions only")
 
@@ -307,7 +303,7 @@ def main() -> None:
                                               bias=-11, compute_mask=mask,
                                               write_mask=pattern))
 
-    if args.mask_test_goldens:
+    if args.l >= 3:
         # Test 32 resets macros before each job, so disabled writes retain zero.
         # Keep bit zero enabled to exercise the last surviving bit at mask=1023.
         write_pattern = int("0123456789abcdef13579bdf2468ace0fedcba98765432100f1e2d3c4b5a6979", 16)

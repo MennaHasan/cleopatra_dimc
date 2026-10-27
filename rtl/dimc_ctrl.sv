@@ -17,26 +17,22 @@ module dimc_ctrl
   output dimc_config_t config_o,
   output logic datapath_start_o, streamer_start_o,
   output logic clear_o, abort_o, busy_o,
-  input logic [1:0] datapath_ready_i, datapath_done_i,
-  input wire dimc_streamer_flags_t [1:0] streamer_flags_i
+  input logic datapath_ready_i, datapath_done_i,
+  input wire dimc_streamer_flags_t streamer_flags_i
 );
   ctrl_slave_t slave_ctrl;
   flags_slave_t slave_flags;
   ctrl_regfile_t reg_file;
   dimc_config_t programmed, config_q;
   logic soft_clear, valid_config, error_q;
-  logic [1:0] dp_done_q, stream_done_q, stream_done, stream_busy;
-  logic [1:0] module_done, module_busy;
-  for (genvar m=0; m<2; m++) begin : gen_status
-    assign stream_done[m] = streamer_flags_i[m].done;
-    assign stream_busy[m] = streamer_flags_i[m].busy;
-  end
+  logic dp_done_q, stream_done_q, module_done, module_busy;
+  logic stream_busy;
+  assign stream_busy = streamer_flags_i.busy;
   assign module_done = dp_done_q & stream_done_q;
-  assign module_busy = {2{busy_o && !error_q}} & ~module_done;
+  assign module_busy = busy_o && !error_q && !module_done;
   // Use wide arithmetic only for validation, so invalid 32-bit address ranges
   // cannot silently wrap and access unrelated memory.
   logic [65:0] weight_end, input_end, output_end;
-  logic [65:0] weight_end_2, input_end_2, output_end_2;
   typedef enum logic [2:0] {IDLE, START, WAIT_READY, RUN, FINISH, ABORT, CLEAR} state_t;
   state_t state_q;
 
@@ -53,9 +49,6 @@ module dimc_ctrl
     programmed.input_addr = reg_file.hwpe_params[DIMC_REG_INPUT_ADDR];
     programmed.kernel_addr = reg_file.hwpe_params[DIMC_REG_KERNEL_ADDR];
     programmed.output_addr = reg_file.hwpe_params[DIMC_REG_OUTPUT_ADDR];
-    programmed.input_addr_2 = reg_file.hwpe_params[DIMC_REG_INPUT_ADDR_2];
-    programmed.kernel_addr_2 = reg_file.hwpe_params[DIMC_REG_KERNEL_ADDR_2];
-    programmed.output_addr_2 = reg_file.hwpe_params[DIMC_REG_OUTPUT_ADDR_2];
     programmed.weight_rows = reg_file.hwpe_params[DIMC_REG_WEIGHT_ROWS];
     programmed.weight_cols = reg_file.hwpe_params[DIMC_REG_WEIGHT_COLS];
     programmed.input_rows = reg_file.hwpe_params[DIMC_REG_INPUT_ROWS];
@@ -73,12 +66,6 @@ module dimc_ctrl
                       66'(programmed.input_rows)*66'(programmed.input_cols);
   assign output_end = 66'(programmed.output_addr) +
                        66'(programmed.weight_rows)*66'(programmed.input_cols)*66'd4;
-  assign weight_end_2 = 66'(programmed.kernel_addr_2) +
-                         66'(programmed.weight_rows)*66'(programmed.weight_cols);
-  assign input_end_2 = 66'(programmed.input_addr_2) +
-                        66'(programmed.input_rows)*66'(programmed.input_cols);
-  assign output_end_2 = 66'(programmed.output_addr_2) +
-                         66'(programmed.weight_rows)*66'(programmed.input_cols)*66'd4;
   // Inner dimensions are packed byte counts for every mode; one inner tile
   // occupies 128 bytes regardless of precision. All four 2-bit modes are valid.
   assign valid_config = programmed.weight_rows != 0 && programmed.weight_cols != 0 &&
@@ -87,15 +74,12 @@ module dimc_ctrl
       programmed.input_cols[2:0] == 0 &&
       programmed.input_addr[2:0] == 0 && programmed.kernel_addr[4:0] == 0 &&
       programmed.output_addr[4:0] == 0 &&
-      programmed.input_addr_2[2:0] == 0 && programmed.kernel_addr_2[4:0] == 0 &&
-      programmed.output_addr_2[4:0] == 0 &&
-      weight_end <= 66'h100000000 && input_end <= 66'h100000000 && output_end <= 66'h100000000 &&
-      weight_end_2 <= 66'h100000000 && input_end_2 <= 66'h100000000 && output_end_2 <= 66'h100000000;
+      weight_end <= 66'h100000000 && input_end <= 66'h100000000 && output_end <= 66'h100000000;
 
   assign config_o = config_q;
   assign busy_o = state_q != IDLE;
   assign datapath_start_o = state_q == START && !soft_clear;
-  assign streamer_start_o = state_q == WAIT_READY && (&datapath_ready_i) && !soft_clear;
+  assign streamer_start_o = state_q == WAIT_READY && datapath_ready_i && !soft_clear;
   // Soft clear is drained before resetting the engines: an old memory response
   // must never be mistaken for data from the next job. In-flight writes finish.
   assign abort_o = soft_clear || state_q == ABORT;
@@ -105,9 +89,9 @@ module dimc_ctrl
     slave_ctrl = '0;
     slave_ctrl.done = state_q == FINISH && !soft_clear;
     slave_ctrl.evt = state_q == FINISH && error_q && !soft_clear;
-    // 0x18: bit 0 overall busy, bit 1 error, bits 3:2 module busy,
-    // bits 5:4 remembered module completion (cleared by next job/soft clear).
-    slave_ctrl.ext_flags = {26'b0, module_done, module_busy, error_q, busy_o};
+    // 0x18: bit 0 overall busy, bit 1 error, bit 2 module busy,
+    // bit 4 remembered module completion (cleared by next job/soft clear).
+    slave_ctrl.ext_flags = {28'b0, module_done, 1'b0, module_busy, error_q, busy_o};
   end
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
@@ -124,7 +108,7 @@ module dimc_ctrl
       stream_done_q <= 0;
     end else begin
       dp_done_q <= dp_done_q | datapath_done_i;
-      stream_done_q <= stream_done_q | stream_done;
+      stream_done_q <= stream_done_q | streamer_flags_i.done;
       case (state_q)
         IDLE: if (slave_flags.start) begin
           config_q <= programmed;
@@ -134,11 +118,11 @@ module dimc_ctrl
           state_q <= valid_config ? START : FINISH;
         end
         START: state_q <= WAIT_READY;
-        WAIT_READY: if (&datapath_ready_i) state_q <= RUN;
-        RUN: if ((&(dp_done_q | datapath_done_i)) &&
-                 (&(stream_done_q | stream_done))) state_q <= FINISH;
+        WAIT_READY: if (datapath_ready_i) state_q <= RUN;
+        RUN: if ((dp_done_q | datapath_done_i) &&
+                 (stream_done_q | streamer_flags_i.done)) state_q <= FINISH;
         FINISH: state_q <= IDLE;
-        ABORT: if (!(|stream_busy)) state_q <= CLEAR;
+        ABORT: if (!stream_busy) state_q <= CLEAR;
         CLEAR: state_q <= IDLE;
         default: state_q <= IDLE;
       endcase

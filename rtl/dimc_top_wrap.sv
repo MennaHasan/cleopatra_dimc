@@ -29,17 +29,12 @@ module dimc_top_wrap
   output logic [31:0]         periph_r_data_o,
   output logic                periph_r_valid_o,
   output logic [ID_WIDTH-1:0] periph_r_id_o,
-  // One shared 256-bit read/write memory interface per module.
+  // One shared 256-bit read/write memory interface.
   output dimc_req_t tcdm_req_o,
-  input  dimc_rsp_t tcdm_rsp_i,
-  output dimc_req_t tcdm_2_req_o,
-  input  dimc_rsp_t tcdm_2_rsp_i
+  input  dimc_rsp_t tcdm_rsp_i
 );
-  localparam hci_size_parameter_t `HCI_SIZE_PARAM(tcdm_2) = `HCI_SIZE_PARAM(tcdm);
-
   hwpe_ctrl_intf_periph #(.ID_WIDTH(ID_WIDTH)) periph (.clk(clk_i));
-  `HCI_INTF(tcdm,   clk_i);
-  `HCI_INTF(tcdm_2, clk_i);
+  `HCI_INTF(tcdm, clk_i);
 
   assign periph.req      = periph_req_i;
   assign periph.add      = periph_add_i;
@@ -52,8 +47,7 @@ module dimc_top_wrap
   assign periph_r_valid_o = periph.r_valid;
   assign periph_r_id_o    = periph.r_id;
 
-  `HCI_ASSIGN_FROM_INTF(tcdm,   tcdm_req_o,   tcdm_rsp_i)
-  `HCI_ASSIGN_FROM_INTF(tcdm_2, tcdm_2_req_o, tcdm_2_rsp_i)
+  `HCI_ASSIGN_FROM_INTF(tcdm, tcdm_req_o, tcdm_rsp_i)
 
   dimc_top #(
     .N_CORES(N_CORES), .N_CONTEXT(N_CONTEXT), .ID(ID_WIDTH),
@@ -62,7 +56,7 @@ module dimc_top_wrap
     .OUTPUT_SIZE(`HCI_SIZE_PARAM(tcdm))
   ) i_dimc_top (
     .clk_i, .rst_ni, .busy_o, .evt_o, .periph,
-    .tcdm, .tcdm_2
+    .tcdm
   );
 
   // synthesis translate_off

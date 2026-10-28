@@ -1,0 +1,153 @@
+Information: Updating design information... (UID-85)
+Warning: Design 'dimc_top_wrap' contains 3 high-fanout nets. A fanout number of 1000 will be used for delay calculations involving these nets. (TIM-134)
+ 
+****************************************
+Report : timing
+        -path full
+        -delay max
+        -max_paths 1
+Design : dimc_top_wrap
+Version: W-2024.09-SP2
+Date   : Thu Oct 29 00:01:38 2026
+****************************************
+
+ # A fanout number of 1000 was used for high fanout net computations.
+
+Operating Conditions: SSG_0P72V_0P00V_0P00V_0P00V_M40C   Library: gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+Wire Load Model Mode: enclosed
+
+  Startpoint: i_dimc_top/i_ctrl/i_slave/running_context_reg_0_
+              (rising edge-triggered flip-flop clocked by main_clk)
+  Endpoint: i_dimc_top/i_ctrl/error_q_reg
+            (rising edge-triggered flip-flop clocked by main_clk)
+  Path Group: main_clk
+  Path Type: max
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  dimc_top_wrap      ZeroWLM               gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_hwpe_ctrl_slave_0_00000002_00000002_21_0_0000000a_I_cfg_hwpe_ctrl_intf_periph_slave_ID_WIDTH_32_h0000000a_0 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_hwpe_ctrl_regfile_00000000_00000002_0000000a_00000015_00000000_0 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_dimc_ctrl_00000002_00000002_0000000a_I_periph_hwpe_ctrl_intf_periph_slave_ID_WIDTH_32_h0000000a_0 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+
+  Point                                                                                                                                                                    Incr       Path
+  -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  clock main_clk (rise edge)                                                                                                                                             0.0000     0.0000
+  clock network delay (ideal)                                                                                                                                            0.0000     0.0000
+  i_dimc_top/i_ctrl/i_slave/running_context_reg_0_/CK (VDB116SLT20_FDPRBQ_V2S_4)                                                                                         0.0000 #   0.0000 r
+  i_dimc_top/i_ctrl/i_slave/running_context_reg_0_/Q (VDB116SLT20_FDPRBQ_V2S_4)                                                                                          0.0609     0.0609 r
+  i_dimc_top/i_ctrl/i_slave/i_regfile/flags_i[34] (dimc_top_wrap_hwpe_ctrl_regfile_00000000_00000002_0000000a_00000015_00000000_0)                                       0.0000     0.0609 r
+  i_dimc_top/i_ctrl/i_slave/i_regfile/U543/X (VDB116SLT20_INV_8)                                                                                                         0.0128     0.0738 f
+  i_dimc_top/i_ctrl/i_slave/i_regfile/U536/X (VDB116SLT20_BUF_20)                                                                                                        0.0157     0.0895 f
+  i_dimc_top/i_ctrl/i_slave/i_regfile/U428/X (VDB116SLT20_ND2_6)                                                                                                         0.0059     0.0953 r
+  i_dimc_top/i_ctrl/i_slave/i_regfile/U443/X (VDB116SLT20_OAI21_6)                                                                                                       0.0141     0.1094 f
+  i_dimc_top/i_ctrl/i_slave/i_regfile/U492/X (VDB116SLT20_INV_20)                                                                                                        0.0106     0.1200 r
+  i_dimc_top/i_ctrl/i_slave/i_regfile/reg_file[398] (dimc_top_wrap_hwpe_ctrl_regfile_00000000_00000002_0000000a_00000015_00000000_0)                                     0.0000     0.1200 r
+  i_dimc_top/i_ctrl/i_slave/reg_file[398] (dimc_top_wrap_hwpe_ctrl_slave_0_00000002_00000002_21_0_0000000a_I_cfg_hwpe_ctrl_intf_periph_slave_ID_WIDTH_32_h0000000a_0)    0.0000     0.1200 r
+  i_dimc_top/i_ctrl/U6106/X (VDB116SLT20_INV_20)                                                                                                                         0.0072     0.1273 f
+  i_dimc_top/i_ctrl/U4003/X (VDB116SLT20_NR2_CA_2)                                                                                                                       0.0114     0.1386 r
+  i_dimc_top/i_ctrl/U1997/X (VDB116SLT20_ND2_4)                                                                                                                          0.0092     0.1479 f
+  i_dimc_top/i_ctrl/U2008/X (VDB116SLT20_INV_2)                                                                                                                          0.0067     0.1545 r
+  i_dimc_top/i_ctrl/U1856/X (VDB116SLT20_ND2_3)                                                                                                                          0.0079     0.1624 f
+  i_dimc_top/i_ctrl/U4477/X (VDB116SLT20_INV_2)                                                                                                                          0.0065     0.1689 r
+  i_dimc_top/i_ctrl/U5466/X (VDB116SLT20_NR2_3)                                                                                                                          0.0066     0.1756 f
+  i_dimc_top/i_ctrl/U6429/X (VDB116SLT20_OAI21_4)                                                                                                                        0.0079     0.1835 r
+  i_dimc_top/i_ctrl/U6428/X (VDB116SLT20_EN2_2)                                                                                                                          0.0199     0.2033 f
+  i_dimc_top/i_ctrl/U7296/X (VDB116SLT20_EN2_2)                                                                                                                          0.0233     0.2266 r
+  i_dimc_top/i_ctrl/U2010/X (VDB116SLT20_ND2_2)                                                                                                                          0.0073     0.2340 f
+  i_dimc_top/i_ctrl/U5344/X (VDB116SLT20_ND2_CA_2)                                                                                                                       0.0065     0.2405 r
+  i_dimc_top/i_ctrl/U2012/X (VDB116SLT20_AO21B_2)                                                                                                                        0.0092     0.2497 f
+  i_dimc_top/i_ctrl/U2016/X (VDB116SLT20_ND2_4)                                                                                                                          0.0066     0.2563 r
+  i_dimc_top/i_ctrl/U5549/X (VDB116SLT20_EO3_2)                                                                                                                          0.0452     0.3016 r
+  i_dimc_top/i_ctrl/U6338/X (VDB116SLT20_NR2_CA_2)                                                                                                                       0.0078     0.3094 f
+  i_dimc_top/i_ctrl/U5552/X (VDB116SLT20_OAI21_4)                                                                                                                        0.0089     0.3183 r
+  i_dimc_top/i_ctrl/U8981/S (VDB116SLT20_ADDF_A_2)                                                                                                                       0.0410     0.3593 f
+  i_dimc_top/i_ctrl/U8985/S (VDB116SLT20_ADDF_A_2)                                                                                                                       0.0401     0.3994 r
+  i_dimc_top/i_ctrl/U7492/X (VDB116SLT20_EO2_2)                                                                                                                          0.0293     0.4287 f
+  i_dimc_top/i_ctrl/U5708/X (VDB116SLT20_EN2_2)                                                                                                                          0.0289     0.4576 r
+  i_dimc_top/i_ctrl/U303/X (VDB116SLT20_ND2_2)                                                                                                                           0.0087     0.4663 f
+  i_dimc_top/i_ctrl/U5707/X (VDB116SLT20_INV_2)                                                                                                                          0.0085     0.4749 r
+  i_dimc_top/i_ctrl/U5363/X (VDB116SLT20_AOI21_6)                                                                                                                        0.0067     0.4815 f
+  i_dimc_top/i_ctrl/U5704/X (VDB116SLT20_OAI21_6)                                                                                                                        0.0097     0.4912 r
+  i_dimc_top/i_ctrl/U5964/X (VDB116SLT20_AOI21_6)                                                                                                                        0.0122     0.5034 f
+  i_dimc_top/i_ctrl/U54/X (VDB116SLT20_NR3_4)                                                                                                                            0.0102     0.5136 r
+  i_dimc_top/i_ctrl/U34/X (VDB116SLT20_NR3_CA_4)                                                                                                                         0.0117     0.5252 f
+  i_dimc_top/i_ctrl/U5471/X (VDB116SLT20_EN2_2)                                                                                                                          0.0234     0.5487 r
+  i_dimc_top/i_ctrl/U6030/X (VDB116SLT20_NR2_CA_2)                                                                                                                       0.0056     0.5543 f
+  i_dimc_top/i_ctrl/U7664/X (VDB116SLT20_ND3_CA_2)                                                                                                                       0.0059     0.5602 r
+  i_dimc_top/i_ctrl/U7139/X (VDB116SLT20_NR2_CA_2)                                                                                                                       0.0058     0.5660 f
+  i_dimc_top/i_ctrl/U1981/X (VDB116SLT20_ND3_CA_2)                                                                                                                       0.0062     0.5722 r
+  i_dimc_top/i_ctrl/U2337/X (VDB116SLT20_NR2_CA_2)                                                                                                                       0.0066     0.5788 f
+  i_dimc_top/i_ctrl/U1979/X (VDB116SLT20_AO2BB2_1)                                                                                                                       0.0080     0.5867 r
+  i_dimc_top/i_ctrl/error_q_reg/D (VDB116SLT20_FDPRBQ_V2_2)                                                                                                              0.0000     0.5867 r
+  data arrival time                                                                                                                                                                 0.5867
+
+  clock main_clk (rise edge)                                                                                                                                             0.7143     0.7143
+  clock network delay (ideal)                                                                                                                                            0.0000     0.7143
+  clock uncertainty                                                                                                                                                     -0.2000     0.5143
+  i_dimc_top/i_ctrl/error_q_reg/CK (VDB116SLT20_FDPRBQ_V2_2)                                                                                                             0.0000     0.5143 r
+  library setup time                                                                                                                                                     0.0013     0.5156
+  data required time                                                                                                                                                                0.5156
+  -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  data required time                                                                                                                                                                0.5156
+  data arrival time                                                                                                                                                                -0.5867
+  -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  slack (VIOLATED)                                                                                                                                                                 -0.0711
+
+
+  Startpoint: rst_ni (input port clocked by main_clk)
+  Endpoint: i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/mem_q_reg_0__209_/RD
+            (internal path endpoint)
+  Path Group: default
+  Path Type: max
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  dimc_top_wrap      ZeroWLM               gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_dimc_module_2_I_tcdm_hci_core_intf_initiator_DW_32_h00000100_AW_32_h00000020_BW_32_h00000008_UW_32_h00000001_IW_32_h00000001_EW_32_h00000000_EHW_32_h00000000_741949_0 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_dimc_datapath_I_input_i_hwpe_stream_intf_stream__DATA_WIDTH_256I_kernel_i_hwpe_stream_intf_stream__DATA_WIDTH_256_1 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_cleopatra_s00000100_s00000020_s00000080_s00000040_0 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_spatz_dimc_dual_SECTION_WIDTH256_INP_FIFO_DEPTH32_WGT_FIFO_DEPTH128_OUT_FIFO_DEPTH64_0 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_fifo_v3_0_256_128_1 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+
+  Point                                                                                                                                                                                                                                                                                                                                                                                                                   Incr       Path
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  input external delay                                                                                                                                                                                                                                                                                                                                                                                                  0.3000     0.3000 r
+  rst_ni (in)                                                                                                                                                                                                                                                                                                                                                                                                           0.0117     0.3117 r
+  i_dimc_top/rst_ni (dimc_top_wrap_dimc_top_00000002_00000002_0000000a_I_periph_hwpe_ctrl_intf_periph__ID_WIDTH_32_h0000000aI_tcdm_hci_core_intf__DW_32_h00000100_AW_32_h00000020_BW_32_h00000008_UW_32_h00000001_IW_32_h00000001_EW_32_h00000000_EHW_32_h00000000I_tcdm_2_hci_core_intf__DW_32_h00000100_AW_32_h00000020_BW_32_h00000008_UW_32_h00000001_IW_32_h00000001_EW_32_h00000000_EHW_32_h00000000_741949_0)    0.0000     0.3117 r
+  i_dimc_top/i_module_2/rst_ni (dimc_top_wrap_dimc_module_2_I_tcdm_hci_core_intf_initiator_DW_32_h00000100_AW_32_h00000020_BW_32_h00000008_UW_32_h00000001_IW_32_h00000001_EW_32_h00000000_EHW_32_h00000000_741949_0)                                                                                                                                                                                                   0.0000     0.3117 r
+  i_dimc_top/i_module_2/U3/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                                                                      0.1913     0.5030 r
+  i_dimc_top/i_module_2/i_datapath/rst_ni (dimc_top_wrap_dimc_datapath_I_input_i_hwpe_stream_intf_stream__DATA_WIDTH_256I_kernel_i_hwpe_stream_intf_stream__DATA_WIDTH_256_1)                                                                                                                                                                                                                                           0.0000     0.5030 r
+  i_dimc_top/i_module_2/i_datapath/U50/X (VDB116SLT20_NR2B_4)                                                                                                                                                                                                                                                                                                                                                           0.0644     0.5673 r
+  i_dimc_top/i_module_2/i_datapath/U792/X (VDB116LVT20_INV_1)                                                                                                                                                                                                                                                                                                                                                           0.0499     0.6173 f
+  i_dimc_top/i_module_2/i_datapath/U866/X (VDB116LVT20_INV_1)                                                                                                                                                                                                                                                                                                                                                           0.1924     0.8096 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/rst_n (dimc_top_wrap_cleopatra_s00000100_s00000020_s00000080_s00000040_0)                                                                                                                                                                                                                                                                                                0.0000     0.8096 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/U138/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                                             0.2172     1.0268 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/rst_n (dimc_top_wrap_spatz_dimc_dual_SECTION_WIDTH256_INP_FIFO_DEPTH32_WGT_FIFO_DEPTH128_OUT_FIFO_DEPTH64_0)                                                                                                                                                                                                                                                 0.0000     1.0268 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/U6/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                                   0.2353     1.2621 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/rst_ni (dimc_top_wrap_fifo_v3_0_256_128_1)                                                                                                                                                                                                                                                                                                        0.0000     1.2621 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/U5604/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                     0.2544     1.5165 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/U5467/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                     0.2569     1.7734 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/U6922/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                     0.2423     2.0157 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/U3967/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                     0.2456     2.2613 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/U5603/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                     0.2682     2.5295 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/U5587/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                     0.2559     2.7854 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/U3945/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                     0.2345     3.0199 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/U9963/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                     0.2576     3.2775 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/U2762/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                     0.2569     3.5345 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/U9587/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                     0.2647     3.7991 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/U9647/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                                                     0.2465     4.0457 r
+  i_dimc_top/i_module_2/i_datapath/i_cleopatra/u_dimc_dual/u_wgt_fifo/mem_q_reg_0__209_/RD (VDB116LVT20_FDPRBQ_V2AS_1)                                                                                                                                                                                                                                                                                                  0.0000     4.0457 r
+  data arrival time                                                                                                                                                                                                                                                                                                                                                                                                                4.0457
+
+  max_delay                                                                                                                                                                                                                                                                                                                                                                                                           800.0000   800.0000
+  output external delay                                                                                                                                                                                                                                                                                                                                                                                                 0.0000   800.0000
+  data required time                                                                                                                                                                                                                                                                                                                                                                                                             800.0000
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  data required time                                                                                                                                                                                                                                                                                                                                                                                                             800.0000
+  data arrival time                                                                                                                                                                                                                                                                                                                                                                                                               -4.0457
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  slack (MET)                                                                                                                                                                                                                                                                                                                                                                                                                    795.9543
+
+
+1

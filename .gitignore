@@ -7,6 +7,7 @@
 
 # Previous experiment archive is entirely local.
 /timing_analysis/experiments/
+/timing_analysis/run_20261029_010330_090340/
 
 # Assistant-added supporting documentation, not requested project deliverables.
 /timing_analysis/EXPERIMENTS.md

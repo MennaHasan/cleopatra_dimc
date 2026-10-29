@@ -1,0 +1,115 @@
+Information: Updating design information... (UID-85)
+ 
+****************************************
+Report : timing
+        -path full
+        -delay max
+        -max_paths 1
+Design : dimc_top_wrap
+Version: W-2024.09-SP2
+Date   : Thu Oct 29 14:56:31 2026
+****************************************
+
+Operating Conditions: SSG_0P72V_0P00V_0P00V_0P00V_M40C   Library: gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+Wire Load Model Mode: enclosed
+
+  Startpoint: i_dimc_top/gen_accumulators_200__i_accumulator/acc_q_reg_3_
+              (rising edge-triggered flip-flop clocked by main_clk)
+  Endpoint: i_dimc_top/gen_accumulators_200__i_accumulator/acc_q_reg_31_
+            (rising edge-triggered flip-flop clocked by main_clk)
+  Path Group: main_clk
+  Path Type: max
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  dimc_top_wrap_accumulator_DATA_WIDTH32_OUT_WIDTH32_56 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_dimc_top_00000002_00000002_0000000a_I_periph_hwpe_ctrl_intf_periph__ID_WIDTH_32_h0000000aI_tcdm_hci_core_intf__DW_32_h00000100_AW_32_h00000020_BW_32_h00000008_UW_32_h00000001_IW_32_h00000001_EW_32_h00000000_EHW_32_h00000000_741949_0 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+
+  Point                                                                                           Incr       Path
+  ------------------------------------------------------------------------------------------------------------------
+  clock main_clk (rise edge)                                                                    0.0000     0.0000
+  clock network delay (ideal)                                                                   0.0000     0.0000
+  i_dimc_top/gen_accumulators_200__i_accumulator/acc_q_reg_3_/CK (VDB116LVT20_FDPRBQ_V2AS_1)    0.0000     0.0000 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/acc_q_reg_3_/Q (VDB116LVT20_FDPRBQ_V2AS_1)     0.1313     0.1313 f
+  i_dimc_top/gen_accumulators_200__i_accumulator/U66/X (VDB116LVT20_NR2_MR_1)                   0.0244     0.1557 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/U37/X (VDB116LVT20_NR2_L_1)                    0.0245     0.1802 f
+  i_dimc_top/gen_accumulators_200__i_accumulator/U69/X (VDB116LVT20_AOI21_1)                    0.0281     0.2083 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/U76/X (VDB116LVT20_OAI21_1)                    0.0295     0.2378 f
+  i_dimc_top/gen_accumulators_200__i_accumulator/U27/X (VDB116LVT20_AOI21_1)                    0.0279     0.2657 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/U26/X (VDB116LVT20_OAI21_1)                    0.0317     0.2973 f
+  i_dimc_top/gen_accumulators_200__i_accumulator/U29/X (VDB116LVT20_AOI21_1)                    0.0312     0.3285 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/U28/X (VDB116SLT20_OAI21_1)                    0.0190     0.3475 f
+  i_dimc_top/gen_accumulators_200__i_accumulator/U14/X (VDB116SLT20_AOI21_1)                    0.0147     0.3623 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/U171/X (VDB116LVT20_OAI21_1)                   0.0267     0.3890 f
+  i_dimc_top/gen_accumulators_200__i_accumulator/U173/X (VDB116LVT20_AOI21_1)                   0.0306     0.4196 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/U175/X (VDB116LVT20_OAI21_1)                   0.0317     0.4513 f
+  i_dimc_top/gen_accumulators_200__i_accumulator/U178/X (VDB116LVT20_AOI21_1)                   0.0306     0.4819 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/U180/X (VDB116LVT20_OAI21_1)                   0.0317     0.5136 f
+  i_dimc_top/gen_accumulators_200__i_accumulator/U184/X (VDB116LVT20_AOI21_1)                   0.0312     0.5448 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/U48/X (VDB116SLT20_OAI21_1)                    0.0190     0.5638 f
+  i_dimc_top/gen_accumulators_200__i_accumulator/U13/X (VDB116SLT20_AOI21_1)                    0.0147     0.5785 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/U190/X (VDB116LVT20_OAI21_1)                   0.0267     0.6052 f
+  i_dimc_top/gen_accumulators_200__i_accumulator/U194/X (VDB116LVT20_AOI21_1)                   0.0306     0.6359 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/U197/X (VDB116LVT20_OAI21_1)                   0.0317     0.6675 f
+  i_dimc_top/gen_accumulators_200__i_accumulator/U200/X (VDB116LVT20_AOI21_1)                   0.0306     0.6982 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/U203/X (VDB116LVT20_OAI21_1)                   0.0279     0.7261 f
+  i_dimc_top/gen_accumulators_200__i_accumulator/U8/X (VDB116LVT20_EN2_1)                       0.0496     0.7756 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/U207/X (VDB116LVT20_AN2_CA_1)                  0.0247     0.8003 r
+  i_dimc_top/gen_accumulators_200__i_accumulator/acc_q_reg_31_/D (VDB116SLT20_FDPRBQ_V2AS_1)    0.0000     0.8003 r
+  data arrival time                                                                                        0.8003
+
+  clock main_clk (rise edge)                                                                    1.0000     1.0000
+  clock network delay (ideal)                                                                   0.0000     1.0000
+  clock uncertainty                                                                            -0.2000     0.8000
+  i_dimc_top/gen_accumulators_200__i_accumulator/acc_q_reg_31_/CK (VDB116SLT20_FDPRBQ_V2AS_1)   0.0000     0.8000 r
+  library setup time                                                                            0.0003     0.8003
+  data required time                                                                                       0.8003
+  ------------------------------------------------------------------------------------------------------------------
+  data required time                                                                                       0.8003
+  data arrival time                                                                                       -0.8003
+  ------------------------------------------------------------------------------------------------------------------
+  slack (MET)                                                                                              0.0000
+
+
+  Startpoint: rst_ni (input port clocked by main_clk)
+  Endpoint: i_dimc_top/i_streamer/i_input_source/i_addressgen/d0_addr_q_reg_5_/RD
+            (internal path endpoint)
+  Path Group: default
+  Path Type: max
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  dimc_top_wrap      ZeroWLM               gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_dimc_top_00000002_00000002_0000000a_I_periph_hwpe_ctrl_intf_periph__ID_WIDTH_32_h0000000aI_tcdm_hci_core_intf__DW_32_h00000100_AW_32_h00000020_BW_32_h00000008_UW_32_h00000001_IW_32_h00000001_EW_32_h00000000_EHW_32_h00000000_741949_0 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_dimc_streamer_I_input_tcdm_hci_core_intf__DW_256_IW_1_EW_0_EHW_0I_kernel_tcdm_hci_core_intf__DW_256_IW_1_EW_0_EHW_0I_output_tcdm_hci_core_intf__DW_256_IW_1_EW_0_EHW_0I_input_o_hwpe_stream_intf_stream__DATA_WIDTH_256I_kernel_o_hwpe_stream_intf_stream__DATA_WIDTH_256_741949_0 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_hci_core_source_0_0_I_tcdm_hci_core_intf_initiator_DW_256_IW_1_EW_0_EHW_0I_stream_hwpe_stream_intf_stream__DATA_WIDTH_256_403949_0 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+  dimc_top_wrap_hwpe_stream_addressgen_v4_0_I_addr_o_hwpe_stream_intf_stream__DATA_WIDTH_32_0 ZeroWLM gf22nspllogl20udl116f_SSG_0P72V_0P00V_0P00V_0P00V_M40C
+
+  Point                                                                                                                                                                                                                                                                                                                                Incr       Path
+  -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  input external delay                                                                                                                                                                                                                                                                                                               0.3000     0.3000 r
+  rst_ni (in)                                                                                                                                                                                                                                                                                                                        0.0061     0.3061 r
+  i_dimc_top/rst_ni (dimc_top_wrap_dimc_top_00000002_00000002_0000000a_I_periph_hwpe_ctrl_intf_periph__ID_WIDTH_32_h0000000aI_tcdm_hci_core_intf__DW_32_h00000100_AW_32_h00000020_BW_32_h00000008_UW_32_h00000001_IW_32_h00000001_EW_32_h00000000_EHW_32_h00000000_741949_0)                                                         0.0000     0.3061 r
+  i_dimc_top/U476/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                            0.1727     0.4788 r
+  i_dimc_top/i_streamer/rst_ni (dimc_top_wrap_dimc_streamer_I_input_tcdm_hci_core_intf__DW_256_IW_1_EW_0_EHW_0I_kernel_tcdm_hci_core_intf__DW_256_IW_1_EW_0_EHW_0I_output_tcdm_hci_core_intf__DW_256_IW_1_EW_0_EHW_0I_input_o_hwpe_stream_intf_stream__DATA_WIDTH_256I_kernel_o_hwpe_stream_intf_stream__DATA_WIDTH_256_741949_0)    0.0000     0.4788 r
+  i_dimc_top/i_streamer/U1514/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                                0.2652     0.7441 r
+  i_dimc_top/i_streamer/i_input_source/rst_ni (dimc_top_wrap_hci_core_source_0_0_I_tcdm_hci_core_intf_initiator_DW_256_IW_1_EW_0_EHW_0I_stream_hwpe_stream_intf_stream__DATA_WIDTH_256_403949_0)                                                                                                                                     0.0000     0.7441 r
+  i_dimc_top/i_streamer/i_input_source/U125/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                  0.2573     1.0013 r
+  i_dimc_top/i_streamer/i_input_source/U126/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                  0.2506     1.2519 r
+  i_dimc_top/i_streamer/i_input_source/U35/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                                   0.2544     1.5063 r
+  i_dimc_top/i_streamer/i_input_source/i_addressgen/rst_ni (dimc_top_wrap_hwpe_stream_addressgen_v4_0_I_addr_o_hwpe_stream_intf_stream__DATA_WIDTH_32_0)                                                                                                                                                                             0.0000     1.5063 r
+  i_dimc_top/i_streamer/i_input_source/i_addressgen/U109/X (VDB116LVT20_BUF_A_1)                                                                                                                                                                                                                                                     0.2721     1.7784 r
+  i_dimc_top/i_streamer/i_input_source/i_addressgen/d0_addr_q_reg_5_/RD (VDB116SLT20_FDPRBQ_V2AS_1)                                                                                                                                                                                                                                  0.0000     1.7784 r
+  data arrival time                                                                                                                                                                                                                                                                                                                             1.7784
+
+  max_delay                                                                                                                                                                                                                                                                                                                        800.0000   800.0000
+  output external delay                                                                                                                                                                                                                                                                                                              0.0000   800.0000
+  data required time                                                                                                                                                                                                                                                                                                                          800.0000
+  -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  data required time                                                                                                                                                                                                                                                                                                                          800.0000
+  data arrival time                                                                                                                                                                                                                                                                                                                            -1.7784
+  -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  slack (MET)                                                                                                                                                                                                                                                                                                                                 798.2216
+
+
+1

@@ -1,0 +1,6 @@
+k,l,q,precision,stimulus_seed,macs_per_module,elapsed_cycles,report
+9,28,26,8,1986207561,214695936,2982804,/srv/home/mennatalla.hassan/cleopatra_dimc/timing_analysis/run_20261029_091302_993829/random/k9_l28_q26/timing_report_1.txt
+16,28,21,8,1008939029,308281344,4282998,/srv/home/mennatalla.hassan/cleopatra_dimc/timing_analysis/run_20261029_091302_993829/random/k16_l28_q21/timing_report_1.txt
+27,26,7,8,1981822643,161021952,2237577,/srv/home/mennatalla.hassan/cleopatra_dimc/timing_analysis/run_20261029_091302_993829/random/k27_l26_q7/timing_report_1.txt
+20,6,7,8,1703437960,27525120,386266,/srv/home/mennatalla.hassan/cleopatra_dimc/timing_analysis/run_20261029_091302_993829/random/k20_l6_q7/timing_report_1.txt
+7,29,24,8,1288657487,159645696,2217774,/srv/home/mennatalla.hassan/cleopatra_dimc/timing_analysis/run_20261029_091302_993829/random/k7_l29_q24/timing_report_1.txt

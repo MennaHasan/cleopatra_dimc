@@ -1,0 +1,144 @@
+BEGIN 3:hwpe_stream_intf_stream:fast__4:sim/work
+    data :  1:hwpe_stream_addressgen_v4:fast__1:sim/work 1:hwpe_stream_fifo:fast:sim/work 1:hwpe_stream_addressgen_v4:fast:sim/work
+    ready :  1:hwpe_stream_addressgen_v4:fast__1:sim/work 1:hwpe_stream_fifo:fast:sim/work 1:hwpe_stream_addressgen_v4:fast:sim/work
+    valid :  1:hwpe_stream_addressgen_v4:fast__1:sim/work 1:hwpe_stream_fifo:fast:sim/work 1:hwpe_stream_addressgen_v4:fast:sim/work
+    strb :  1:hwpe_stream_addressgen_v4:fast__1:sim/work 1:hwpe_stream_fifo:fast:sim/work 1:hwpe_stream_addressgen_v4:fast:sim/work
+END 
+BEGIN 3:hwpe_stream_intf_stream:fast__7:sim/work
+    valid :  1:hci_core_sink:fast:sim/work 1:hwpe_stream_fifo:fast__1:sim/work
+    data :  1:hci_core_sink:fast:sim/work 1:hwpe_stream_fifo:fast__1:sim/work
+    strb :  1:hwpe_stream_fifo:fast__1:sim/work
+    ready :  1:hci_core_sink:fast:sim/work 1:hwpe_stream_fifo:fast__1:sim/work
+END 
+BEGIN 1:dimc_top:fast:sim/work
+    config_ :  1:tb_dimc_top:fast:sim/work
+END 
+BEGIN 3:hci_core_intf:fast__1:sim/work
+    data :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    r_user :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    r_ecc :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    r_eready :  1:dimc_hci_mux:fast:sim/work
+    egnt :  1:tb_dimc_top:fast:sim/work
+    add :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    r_ready :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    user :  1:dimc_hci_mux:fast:sim/work
+    r_opc :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    id :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    r_valid :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    r_id :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    ecc :  1:dimc_hci_mux:fast:sim/work
+    req :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    be :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    wen :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    r_data :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+    ereq :  1:dimc_hci_mux:fast:sim/work
+    r_evalid :  1:tb_dimc_top:fast:sim/work
+    gnt :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work
+END 
+BEGIN 3:hci_core_intf:fast__3:sim/work
+    gnt :  1:hci_core_assign:fast:sim/work 1:hci_core_sink:fast:sim/work
+    add :  1:hci_core_assign:fast:sim/work 1:hci_core_sink:fast:sim/work
+    data :  1:hci_core_assign:fast:sim/work 1:hci_core_sink:fast:sim/work
+    r_ready :  1:hci_core_assign:fast:sim/work 1:hci_core_sink:fast:sim/work
+    id :  1:hci_core_assign:fast:sim/work 1:hci_core_sink:fast:sim/work
+    ereq :  1:hci_core_assign:fast:sim/work 1:hci_core_sink:fast:sim/work
+    ecc :  1:hci_core_assign:fast:sim/work 1:hci_core_sink:fast:sim/work
+    r_data :  1:hci_core_assign:fast:sim/work
+    r_user :  1:hci_core_assign:fast:sim/work
+    r_opc :  1:hci_core_assign:fast:sim/work
+    egnt :  1:hci_core_assign:fast:sim/work
+    r_ecc :  1:hci_core_assign:fast:sim/work
+    wen :  1:hci_core_assign:fast:sim/work 1:hci_core_sink:fast:sim/work
+    be :  1:hci_core_assign:fast:sim/work 1:hci_core_sink:fast:sim/work
+    user :  1:hci_core_assign:fast:sim/work 1:hci_core_sink:fast:sim/work
+    r_eready :  1:hci_core_assign:fast:sim/work 1:hci_core_sink:fast:sim/work
+    req :  1:hci_core_assign:fast:sim/work 1:hci_core_sink:fast:sim/work
+    r_valid :  1:hci_core_assign:fast:sim/work
+    r_id :  1:hci_core_assign:fast:sim/work
+    r_evalid :  1:hci_core_assign:fast:sim/work
+END 
+BEGIN 3:hwpe_stream_intf_stream:fast__3:sim/work
+    ready :  1:hci_core_sink:fast:sim/work 1:dimc_streamer:fast:sim/work 1:hci_core_source:fast:sim/work 1:hwpe_stream_assign:fast:sim/work 1:hci_core_source:fast__1:sim/work
+    strb :  1:hci_core_sink:fast:sim/work 1:dimc_streamer:fast:sim/work 1:hci_core_source:fast:sim/work 1:hwpe_stream_assign:fast:sim/work 1:hci_core_source:fast__1:sim/work
+    data :  1:hci_core_sink:fast:sim/work 1:dimc_streamer:fast:sim/work 1:hci_core_source:fast:sim/work 1:hwpe_stream_assign:fast:sim/work 1:hci_core_source:fast__1:sim/work
+    valid :  1:hci_core_sink:fast:sim/work 1:dimc_streamer:fast:sim/work 1:hci_core_source:fast:sim/work 1:hwpe_stream_assign:fast:sim/work 1:hci_core_source:fast__1:sim/work
+END 
+BEGIN 3:hwpe_stream_intf_stream:fast__2:sim/work
+    strb :  1:hci_core_source:fast:sim/work 1:hwpe_stream_assign:fast:sim/work 1:hci_core_source:fast__1:sim/work
+    valid :  1:dimc_streamer:fast:sim/work 1:hci_core_source:fast:sim/work 1:hwpe_stream_assign:fast:sim/work 1:hci_core_source:fast__1:sim/work
+    ready :  1:dimc_streamer:fast:sim/work 1:hci_core_source:fast:sim/work 1:hwpe_stream_assign:fast:sim/work 1:hci_core_source:fast__1:sim/work
+    data :  1:dimc_streamer:fast:sim/work 1:hci_core_source:fast:sim/work 1:hwpe_stream_assign:fast:sim/work 1:hci_core_source:fast__1:sim/work
+END 
+BEGIN 1:dimc_datapath:fast:sim/work
+    fa :  1:tb_dimc_top:fast:sim/work
+    q_q :  1:tb_dimc_top:fast:sim/work
+    inp_push :  1:tb_dimc_top:fast:sim/work
+    l_q :  1:tb_dimc_top:fast:sim/work
+    active_q :  1:tb_dimc_top:fast:sim/work
+    fcsn :  1:tb_dimc_top:fast:sim/work
+    weights_loaded_q :  1:tb_dimc_top:fast:sim/work
+    rcsn :  1:tb_dimc_top:fast:sim/work
+    q_size_q :  1:tb_dimc_top:fast:sim/work
+    weight_load :  1:tb_dimc_top:fast:sim/work
+    ra :  1:tb_dimc_top:fast:sim/work
+    l_size_q :  1:tb_dimc_top:fast:sim/work
+    load_macro :  1:tb_dimc_top:fast:sim/work
+    vector_q :  1:tb_dimc_top:fast:sim/work
+    compe :  1:tb_dimc_top:fast:sim/work
+    k_q :  1:tb_dimc_top:fast:sim/work
+END 
+BEGIN 3:hwpe_ctrl_intf_periph:fast__1:sim/work
+    be :  1:tb_dimc_top:fast:sim/work 1:hwpe_ctrl_slave:fast:sim/work
+    req :  1:tb_dimc_top:fast:sim/work 1:hwpe_ctrl_slave:fast:sim/work
+    data :  1:tb_dimc_top:fast:sim/work 1:hwpe_ctrl_slave:fast:sim/work
+    wen :  1:tb_dimc_top:fast:sim/work 1:hwpe_ctrl_slave:fast:sim/work
+    r_data :  1:tb_dimc_top:fast:sim/work 1:hwpe_ctrl_slave:fast:sim/work
+    r_id :  1:hwpe_ctrl_slave:fast:sim/work
+    id :  1:tb_dimc_top:fast:sim/work 1:hwpe_ctrl_slave:fast:sim/work
+    gnt :  1:tb_dimc_top:fast:sim/work 1:hwpe_ctrl_slave:fast:sim/work
+    r_valid :  1:tb_dimc_top:fast:sim/work 1:hwpe_ctrl_slave:fast:sim/work
+    add :  1:tb_dimc_top:fast:sim/work 1:hwpe_ctrl_slave:fast:sim/work
+END 
+BEGIN 3:hci_core_intf:fast__2:sim/work
+    ecc :  1:hci_core_assign:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work
+    add :  1:dimc_hci_mux:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work 1:hci_core_assign:fast:sim/work
+    r_id :  1:dimc_hci_mux:fast:sim/work 1:hci_core_assign:fast:sim/work
+    r_data :  1:dimc_hci_mux:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work 1:hci_core_assign:fast:sim/work
+    data :  1:dimc_hci_mux:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work 1:hci_core_assign:fast:sim/work
+    r_user :  1:dimc_hci_mux:fast:sim/work 1:hci_core_assign:fast:sim/work
+    user :  1:dimc_hci_mux:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work 1:hci_core_assign:fast:sim/work
+    r_ecc :  1:dimc_hci_mux:fast:sim/work 1:hci_core_assign:fast:sim/work
+    gnt :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work 1:hci_core_assign:fast:sim/work
+    r_evalid :  1:dimc_hci_mux:fast:sim/work 1:hci_core_assign:fast:sim/work
+    ereq :  1:hci_core_assign:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work
+    r_ready :  1:dimc_hci_mux:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work 1:hci_core_assign:fast:sim/work
+    egnt :  1:dimc_hci_mux:fast:sim/work 1:hci_core_assign:fast:sim/work
+    wen :  1:dimc_hci_mux:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work 1:hci_core_assign:fast:sim/work
+    id :  1:dimc_hci_mux:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work 1:hci_core_assign:fast:sim/work
+    r_opc :  1:dimc_hci_mux:fast:sim/work 1:hci_core_assign:fast:sim/work
+    req :  1:tb_dimc_top:fast:sim/work 1:dimc_hci_mux:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_sink:fast:sim/work 1:hci_core_source:fast__1:sim/work 1:hci_core_assign:fast:sim/work
+    r_eready :  1:hci_core_assign:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work
+    r_valid :  1:dimc_hci_mux:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work 1:hci_core_assign:fast:sim/work
+    be :  1:dimc_hci_mux:fast:sim/work 1:hci_core_source:fast:sim/work 1:hci_core_source:fast__1:sim/work 1:hci_core_assign:fast:sim/work
+END 
+BEGIN 3:hwpe_stream_intf_stream:fast__5:sim/work
+    data :  1:hci_core_source:fast:sim/work 1:hwpe_stream_fifo:fast:sim/work 1:hci_core_source:fast__1:sim/work
+    strb :  1:hwpe_stream_fifo:fast:sim/work
+    ready :  1:hci_core_source:fast:sim/work 1:hwpe_stream_fifo:fast:sim/work 1:hci_core_source:fast__1:sim/work
+    valid :  1:hci_core_source:fast:sim/work 1:hwpe_stream_fifo:fast:sim/work 1:hci_core_source:fast__1:sim/work
+END 
+BEGIN 3:hwpe_stream_intf_stream:fast__6:sim/work
+    valid :  1:hwpe_stream_fifo:fast__1:sim/work 1:hwpe_stream_addressgen_v4:fast__2:sim/work
+    ready :  1:hwpe_stream_fifo:fast__1:sim/work 1:hwpe_stream_addressgen_v4:fast__2:sim/work
+    strb :  1:hwpe_stream_fifo:fast__1:sim/work 1:hwpe_stream_addressgen_v4:fast__2:sim/work
+    data :  1:hwpe_stream_fifo:fast__1:sim/work 1:hwpe_stream_addressgen_v4:fast__2:sim/work
+END 
+BEGIN 1:spatz_dimc_dual:fast:sim/work
+    out_push :  1:tb_dimc_top:fast:sim/work
+END 
+BEGIN 3:hwpe_stream_intf_stream:fast__1:sim/work
+    strb :  1:dimc_streamer:fast:sim/work
+    data :  1:dimc_streamer:fast:sim/work 1:dimc_datapath:fast:sim/work
+    ready :  1:dimc_streamer:fast:sim/work 1:dimc_datapath:fast:sim/work
+    valid :  1:dimc_streamer:fast:sim/work 1:dimc_datapath:fast:sim/work
+END 

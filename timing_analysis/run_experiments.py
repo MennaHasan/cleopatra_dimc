@@ -2,7 +2,7 @@
 
 Default: 58 distinct experiments across three controlled sweeps:
 Q=1..20 with K=L=1; L=1..20 with K=Q=1; K=1..20 with L=Q=1.
-The shared K=L=Q=1 baseline is run once. It also runs 30 random configurations
+The shared K=L=Q=1 baseline is run once. It also runs 5 random configurations
 with K, L and Q selected from 5..30; the random results use their own CSV and plots.
 Use --k K --l L --q Q for a single custom experiment.
 Dimensions are passed at runtime; source defaults are never rewritten.
@@ -324,7 +324,7 @@ def main():
 
     plan = make_plan(sizes)
     random_sizes = rng.sample([(k, l, q) for k in range(5, 31)
-                               for l in range(5, 31) for q in range(5, 31)], 30)
+                               for l in range(5, 31) for q in range(5, 31)], 5)
     random_plan = make_plan(random_sizes)
     for index, (size, seeds) in enumerate(plan, 1):
         print("Current experiment {}/{}: K={}, L={}, Q={}; module seeds {} / {}".format(

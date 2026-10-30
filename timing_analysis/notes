@@ -1,0 +1,19 @@
+Run ID: run_20261029_184706_923248
+
+MAIN_CLK_FREQ_HZ: 1273e6
+
+FIFO depths:
+  parameter int INP_FIFO_DEPTH = 16,
+  parameter int WGT_FIFO_DEPTH = 64,
+  parameter int OUT_FIFO_DEPTH = 32,
+
+results of that are in results
+
+where the old results with the settings: f = 1G and 
+FIFO depths:
+  parameter int INP_FIFO_DEPTH = 32,
+  parameter int WGT_FIFO_DEPTH = 128,
+  parameter int OUT_FIFO_DEPTH = 64,
+
+
+are in resuts_original

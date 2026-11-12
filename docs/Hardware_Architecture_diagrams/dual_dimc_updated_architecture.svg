@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="980" viewBox="0 0 1500 980">
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 Z" fill="#263746"/></marker>
+  <marker id="both" markerWidth="10" markerHeight="8" refX="1" refY="4" orient="auto"><path d="M10,0 L0,4 L10,8 Z" fill="#263746"/></marker>
+  <style>
+    text{font-family:Arial,Helvetica,sans-serif;fill:#17212b}.title{font-size:30px;font-weight:bold}.subtitle{font-size:17px;fill:#435466}.head{font-size:20px;font-weight:bold}.label{font-size:16px}.small{font-size:14px}.tiny{font-size:12px}.lane{fill:#fff;stroke:#536475;stroke-width:2}.streamer{fill:#d9efcd;stroke:#4e8a39;stroke-width:2}.mux{fill:#dce8f7;stroke:#527aa5;stroke-width:2}.engine{fill:#fff0dc;stroke:#c78637;stroke-width:2}.macro{fill:#f7a34e;stroke:#a85a18;stroke-width:2}.fifo{fill:#fff;stroke:#52616e;stroke-width:1.5}.controller{fill:#d8eafa;stroke:#5084b2;stroke-width:2}.line{stroke:#263746;stroke-width:2;fill:none;marker-end:url(#arrow)}.bi{stroke:#263746;stroke-width:2;fill:none;marker-start:url(#both);marker-end:url(#arrow)}.ctrl{stroke:#3f72a3;stroke-width:2;stroke-dasharray:8 6;fill:none;marker-end:url(#arrow)}
+  </style>
+</defs>
+<rect width="1500" height="980" fill="#f7f9fb"/>
+<text x="40" y="48" class="title">Dual DIMC accelerator architecture</text>
+<text x="40" y="76" class="subtitle">One shared job controller; two independent memory-connected DIMC modules</text>
+<rect x="180" y="100" width="1280" height="150" rx="12" class="controller"/>
+<text x="205" y="132" class="head">Shared HWPE controller</text>
+<rect x="210" y="151" width="370" height="72" rx="8" fill="#fff" stroke="#6c8ba8"/>
+<text x="230" y="180" class="label">Shared job settings</text><text x="230" y="204" class="small">dimensions · precision · signedness · bias</text>
+<rect x="610" y="151" width="410" height="72" rx="8" fill="#fff" stroke="#6c8ba8"/>
+<text x="630" y="180" class="label">Per-module base addresses</text><text x="630" y="204" class="small">input · weights · output for module 0 and module 1</text>
+<rect x="1050" y="151" width="370" height="72" rx="8" fill="#fff" stroke="#6c8ba8"/>
+<text x="1070" y="180" class="label">Job coordination</text><text x="1070" y="204" class="small">start · busy/error · completion after both modules finish</text>
+
+<!-- Module lanes -->
+<g transform="translate(0,285)">
+ <rect x="160" y="0" width="1300" height="300" rx="12" class="lane"/>
+ <text x="180" y="30" class="head">DIMC module 0</text><text x="367" y="30" class="small">one 256-bit HCI/TCDM port</text>
+ <rect x="20" y="90" width="120" height="82" rx="8" fill="#e8edf2" stroke="#596b79" stroke-width="2"/><text x="37" y="122" class="label">TCDM</text><text x="37" y="147" class="small">256-bit port 0</text>
+ <rect x="175" y="75" width="135" height="105" rx="8" class="mux"/><text x="190" y="108" class="label">HCI mux</text><text x="188" y="132" class="small">3 streams</text><text x="188" y="154" class="small">↔ one port</text>
+ <rect x="330" y="57" width="250" height="205" rx="8" class="streamer"/><text x="350" y="86" class="head">Streamer 0</text><text x="350" y="116" class="small">Address generation</text><text x="350" y="143" class="small">Weight and input reads</text><text x="350" y="170" class="small">Output writes</text><text x="350" y="224" class="tiny">Own stream state and addresses</text>
+ <rect x="600" y="48" width="840" height="225" rx="10" class="engine"/><text x="620" y="77" class="head">Datapath + dual-macro engine</text>
+ <rect x="620" y="98" width="140" height="145" rx="7" fill="#fff" stroke="#9b713f"/><text x="635" y="125" class="label">Tile scheduler</text><text x="635" y="151" class="small">K/L/Q counters</text><text x="635" y="175" class="small">macro ping-pong</text><text x="635" y="199" class="small">result control</text>
+ <rect x="785" y="94" width="150" height="43" rx="5" class="fifo"/><text x="800" y="121" class="small">Weight FIFO</text><text x="800" y="134" class="tiny">128 × 256 bits</text>
+ <rect x="785" y="151" width="150" height="43" rx="5" class="fifo"/><text x="800" y="178" class="small">Input FIFO</text><text x="800" y="191" class="tiny">32 × 256 bits</text>
+ <rect x="955" y="94" width="190" height="70" rx="7" class="macro"/><text x="975" y="121" class="label">spatz_dimc 0</text><text x="975" y="146" class="small">32 × 1024-bit weights</text>
+ <rect x="955" y="178" width="190" height="70" rx="7" class="macro"/><text x="975" y="205" class="label">spatz_dimc 1</text><text x="975" y="230" class="small">32 × 1024-bit weights</text>
+ <rect x="1170" y="104" width="115" height="52" rx="5" class="fifo"/><text x="1182" y="128" class="small">Output FIFO</text><text x="1182" y="147" class="tiny">64 × 32 bits</text>
+ <rect x="1300" y="104" width="120" height="52" rx="5" class="fifo"/><text x="1310" y="128" class="small">Accumulator</text><text x="1310" y="147" class="tiny">256 × 32 bits</text>
+ <path d="M140 130 H175" class="bi"/><path d="M310 130 H330" class="bi"/><path d="M580 126 H600" class="bi"/><path d="M760 119 H785" class="line"/><path d="M760 178 H785" class="line"/><path d="M935 115 H955" class="line"/><path d="M935 172 H955" class="line"/><path d="M1145 130 H1170" class="line"/><path d="M1285 130 H1300" class="line"/>
+</g>
+<g transform="translate(0,630)">
+ <rect x="160" y="0" width="1300" height="300" rx="12" class="lane"/>
+ <text x="180" y="30" class="head">DIMC module 1</text><text x="367" y="30" class="small">one 256-bit HCI/TCDM port</text>
+ <rect x="20" y="90" width="120" height="82" rx="8" fill="#e8edf2" stroke="#596b79" stroke-width="2"/><text x="37" y="122" class="label">TCDM</text><text x="37" y="147" class="small">256-bit port 1</text>
+ <rect x="175" y="75" width="135" height="105" rx="8" class="mux"/><text x="190" y="108" class="label">HCI mux</text><text x="188" y="132" class="small">3 streams</text><text x="188" y="154" class="small">↔ one port</text>
+ <rect x="330" y="57" width="250" height="205" rx="8" class="streamer"/><text x="350" y="86" class="head">Streamer 1</text><text x="350" y="116" class="small">Address generation</text><text x="350" y="143" class="small">Weight and input reads</text><text x="350" y="170" class="small">Output writes</text><text x="350" y="224" class="tiny">Own stream state and addresses</text>
+ <rect x="600" y="48" width="840" height="225" rx="10" class="engine"/><text x="620" y="77" class="head">Datapath + dual-macro engine</text>
+ <rect x="620" y="98" width="140" height="145" rx="7" fill="#fff" stroke="#9b713f"/><text x="635" y="125" class="label">Tile scheduler</text><text x="635" y="151" class="small">K/L/Q counters</text><text x="635" y="175" class="small">macro ping-pong</text><text x="635" y="199" class="small">result control</text>
+ <rect x="785" y="94" width="150" height="43" rx="5" class="fifo"/><text x="800" y="121" class="small">Weight FIFO</text><text x="800" y="134" class="tiny">128 × 256 bits</text>
+ <rect x="785" y="151" width="150" height="43" rx="5" class="fifo"/><text x="800" y="178" class="small">Input FIFO</text><text x="800" y="191" class="tiny">32 × 256 bits</text>
+ <rect x="955" y="94" width="190" height="70" rx="7" class="macro"/><text x="975" y="121" class="label">spatz_dimc 2</text><text x="975" y="146" class="small">32 × 1024-bit weights</text>
+ <rect x="955" y="178" width="190" height="70" rx="7" class="macro"/><text x="975" y="205" class="label">spatz_dimc 3</text><text x="975" y="230" class="small">32 × 1024-bit weights</text>
+ <rect x="1170" y="104" width="115" height="52" rx="5" class="fifo"/><text x="1182" y="128" class="small">Output FIFO</text><text x="1182" y="147" class="tiny">64 × 32 bits</text>
+ <rect x="1300" y="104" width="120" height="52" rx="5" class="fifo"/><text x="1310" y="128" class="small">Accumulator</text><text x="1310" y="147" class="tiny">256 × 32 bits</text>
+ <path d="M140 130 H175" class="bi"/><path d="M310 130 H330" class="bi"/><path d="M580 126 H600" class="bi"/><path d="M760 119 H785" class="line"/><path d="M760 178 H785" class="line"/><path d="M935 115 H955" class="line"/><path d="M935 172 H955" class="line"/><path d="M1145 130 H1170" class="line"/><path d="M1285 130 H1300" class="line"/>
+</g>
+<path d="M1280 250 V275 H700 V333" class="ctrl"/><path d="M1280 250 V610 H700 V678" class="ctrl"/>
+</svg>

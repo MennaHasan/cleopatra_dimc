@@ -15,6 +15,8 @@ module dimc_ctrl
   input wire dimc_streamer_flags_t streamer_flags_i,
   hwpe_stream_intf_stream.sink input_i,
   hwpe_stream_intf_stream.sink kernel_i,
+  input logic inp_full_i, inp_empty_i,
+  input logic wgt_full_i, wgt_empty_i,
   input logic macro_readyn_i,
   output logic macro_compe_o, macro_fcsn_o,
   output logic [1:0] macro_mode_o, macro_fa_o,
@@ -36,12 +38,16 @@ module dimc_ctrl
   ctrl_regfile_t reg_file;
   dimc_config_t programmed, config_q;
   logic soft_clear, valid_config, error_q, module_done_q, module_busy;
-  logic weight_fire, input_fire, macro_result_valid, capture_window;
+  logic weight_push, input_push, weight_fire, input_fire;
+  logic macro_result_valid, capture_window;
   logic [65:0] weight_end, input_end, output_end;
   logic [31:0] k_size_q, l_size_q, q_size_q;
   logic [31:0] k_q, l_q, q_q;
-  logic [7:0] weight_count_q;
+  logic [7:0] weight_count_q, weights_received_q;
+  logic [5:0] inputs_received_q;
   logic [1:0] section_q;
+  localparam logic [7:0] WEIGHT_BEATS = 8'd128;
+  localparam logic [5:0] INPUT_BEATS = 6'd32;
   logic [2:0] vector_q;
   logic [4:0] row_q;
   logic [5:0] result_count_q;
@@ -100,8 +106,10 @@ module dimc_ctrl
   assign capture_window = (state_q == COMPUTE || state_q == DRAIN) && !abort_o;
   assign macro_result_valid = !macro_readyn_i && capture_window;
   assign result_capture_o = macro_result_valid;
-  assign weight_fire = kernel_i.valid && kernel_i.ready;
-  assign input_fire = input_i.valid && input_i.ready;
+  assign weight_push = kernel_i.valid && kernel_i.ready;
+  assign input_push = input_i.valid && input_i.ready;
+  assign weight_fire = state_q == LOAD_WEIGHT && !abort_o && !wgt_empty_i;
+  assign input_fire = state_q == LOAD_VECTOR && !abort_o && !inp_empty_i;
   assign accumulator_clear_o = state_q == START ||
                                (state_q == PRESENT && result_ready_i) ||
                                state_q == CLEAR;
@@ -109,8 +117,12 @@ module dimc_ctrl
   assign evt_o = slave_flags.evt[N_CORES-1:0];
 
   always_comb begin
-    input_i.ready = state_q == LOAD_VECTOR && !abort_o;
-    kernel_i.ready = state_q == LOAD_WEIGHT && !abort_o;
+    input_i.ready = !abort_o && state_q != IDLE && state_q != START &&
+                    state_q != FINISH && state_q != ABORT && state_q != CLEAR &&
+                    inputs_received_q < INPUT_BEATS && !inp_full_i;
+    kernel_i.ready = !abort_o && state_q != IDLE && state_q != START &&
+                     state_q != FINISH && state_q != ABORT && state_q != CLEAR &&
+                     weights_received_q < WEIGHT_BEATS && !wgt_full_i;
 
     macro_compe_o = 1'b0;
     macro_fcsn_o = 1'b1;
@@ -154,15 +166,19 @@ module dimc_ctrl
       module_done_q <= 0;
       k_size_q <= 0; l_size_q <= 0; q_size_q <= 0;
       k_q <= 0; l_q <= 0; q_q <= 0;
-      weight_count_q <= 0; section_q <= 0; vector_q <= 0; row_q <= 0;
+      weight_count_q <= 0; weights_received_q <= 0; inputs_received_q <= 0;
+      section_q <= 0; vector_q <= 0; row_q <= 0;
       result_count_q <= 0;
     end else if (soft_clear) begin
       state_q <= ABORT;
       error_q <= 0;
       module_done_q <= 0;
-      weight_count_q <= 0; section_q <= 0; vector_q <= 0; row_q <= 0;
+      weight_count_q <= 0; weights_received_q <= 0; inputs_received_q <= 0;
+      section_q <= 0; vector_q <= 0; row_q <= 0;
       result_count_q <= 0;
     end else begin
+      if (weight_push) weights_received_q <= weights_received_q + 1'b1;
+      if (input_push) inputs_received_q <= inputs_received_q + 1'b1;
       if (macro_result_valid) result_count_q <= result_count_q + 1'b1;
 
       case (state_q)
@@ -175,7 +191,8 @@ module dimc_ctrl
             l_size_q <= programmed.weight_cols >> 7;
             q_size_q <= programmed.input_cols >> 3;
             k_q <= 0; l_q <= 0; q_q <= 0;
-            weight_count_q <= 0; section_q <= 0; vector_q <= 0; row_q <= 0;
+            weight_count_q <= 0; weights_received_q <= 0; inputs_received_q <= 0;
+            section_q <= 0; vector_q <= 0; row_q <= 0;
             result_count_q <= 0;
             state_q <= START;
           end else state_q <= FINISH;
@@ -184,6 +201,8 @@ module dimc_ctrl
         LOAD_WEIGHT: if (weight_fire) begin
           if (weight_count_q == 127) begin
             weight_count_q <= 0;
+            weights_received_q <= 0;
+            inputs_received_q <= 0;
             section_q <= 0;
             state_q <= LOAD_VECTOR;
           end else weight_count_q <= weight_count_q + 1'b1;
